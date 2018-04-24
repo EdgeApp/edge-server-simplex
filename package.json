@@ -1,0 +1,16 @@
+{
+  "name": "edge-server-simplex",
+  "version": "0.0.1",
+  "description": "Proxy for the simplex API",
+  "main": "src/index.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^5.0.1",
+    "express": "^4.16.3",
+    "request": "^2.85.0",
+    "request-promise": "^4.2.2"
+  }
+}
