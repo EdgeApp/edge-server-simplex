@@ -18,9 +18,6 @@
         "signup_login": {
           "type": "object",
           "properties": {
-            "ip": {
-              "type": "string"
-            },
             "uaid": {
               "type": "string"
             },

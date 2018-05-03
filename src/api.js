@@ -38,13 +38,15 @@ module.exports = function (sandbox, partnerId, apiKey) {
   }
 
   function getPartnerData(data, client_ip) {
+    const newData = data
+    newData['account_details']['signup_login']['ip'] = client_ip
     const options = {
       method: 'POST',
       uri: API_BASE + '/wallet/merchant/v2/payments/partner/data',
       headers: {
         Authorization: `ApiKey ${apiKey}`
       },
-      body: data,
+      body: newData,
       json: true
     }
     console.log(options)
