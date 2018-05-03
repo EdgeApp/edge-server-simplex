@@ -2,21 +2,18 @@ require('dotenv').config()
 
 const express = require('express')
 const bodyParser = require('body-parser')
-const api = require('./api')(process.env.SIMPLEX_SANDBOX === 'true')
+const api = require('./api')(
+  process.env.SIMPLEX_SANDBOX === 'true',
+  process.env.SIMPLEX_PARTNER_ID,
+  process.env.SIMPLEX_API_KEY)
 const Ajv = require('ajv')
 
 /* Setup json-schema parser */
 const ajv = new Ajv()
-const schema = require('./schemas/quote.json')
-ajv.addSchema(schema, 'quote')
-
-if (!process.env.SIMPLEX_PARTNER_ID) {
-  throw new Error("Missing SIMPLEX_PARTNER_ID. Please define in .env file")
-}
-
-if (!process.env.SIMPLEX_API_KEY) {
-  throw new Error("Missing SIMPLEX_API_KEY. Please define in .env file")
-}
+const quoteSchema = require('./schemas/quote.json')
+const partnerDataSchema = require('./schemas/partner-data.json')
+ajv.addSchema(quoteSchema, 'quote')
+ajv.addSchema(partnerDataSchema, 'partner-data')
 
 const app = express()
 app.use(bodyParser.json())
@@ -29,7 +26,7 @@ app.use((req, res, next) => {
 app.post('/quote', async function (req, res) {
   console.log(req.body)
   if (!ajv.validate('quote', req.body)) {
-    return res.json({res:null, err:ajv.errors})
+    return res.status(403).json({res:null, err:ajv.errors})
   }
   const client_ip = process.env.IP_ADDRESS_OVERRIDE
                  || req.headers['x-forwarded-for']
@@ -45,7 +42,24 @@ app.post('/quote', async function (req, res) {
     )
     res.json({res:response, err:null})
   } catch (e) {
-    res.json({res:null, err:"Unable to handle request"})
+    console.log(e.message)
+    res.status(403).json({res:null, err:e.message})
+  }
+})
+
+app.post('/partner/data', async function (req, res) {
+  if (!ajv.validate('partner-data', req.body)) {
+    return res.status(403).json({res:null, err:ajv.errors})
+  }
+  const client_ip = process.env.IP_ADDRESS_OVERRIDE
+                 || req.headers['x-forwarded-for']
+                 || req.connection.remoteAddress
+  try {
+    const response = await api.getPartnerData(req.body, client_ip)
+    res.json({res:response, err:null})
+  } catch (e) {
+    console.log(e.message)
+    res.status(403).json({res:null, err:e.message})
   }
 })
 

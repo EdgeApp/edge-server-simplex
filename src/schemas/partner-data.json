@@ -1,0 +1,101 @@
+{
+  "title": "partner-data",
+  "description": "describes properties required to create a user",
+  "type": "object",
+  "properties": {
+    "account_details": {
+      "type": "object",
+      "properties": {
+        "app_provider_id": {
+          "type": "string"
+        },
+        "app_version_id": {
+          "type": "string"
+        },
+        "app_end_user_id": {
+          "type": "string"
+        },
+        "signup_login": {
+          "type": "object",
+          "properties": {
+            "ip": {
+              "type": "string"
+            },
+            "uaid": {
+              "type": "string"
+            },
+            "accept_language": {
+              "type": "string"
+            },
+            "http_accept_language": {
+              "type": "string"
+            },
+            "user_agent": {
+              "type": "string"
+            },
+            "cookie_session_id": {
+              "type": "string"
+            }
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "transaction_details": {
+      "type": "object",
+      "properties": {
+        "payment_details": {
+          "type": "object",
+          "properties": {
+            "quote_id": {
+              "type": "string"
+            },
+            "payment_id": {
+              "type": "string"
+            },
+            "order_id": {
+              "type": "string"
+            },
+            "fiat_total_amount": {
+              "currency": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              }
+            },
+            "requested_digital_amount": {
+              "type": "object",
+              "currency": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "string"
+              }
+            },
+            "destination_wallet": {
+              "type": "object",
+              "properties": {
+                "currency": {
+                  "type": "string"
+                },
+                "address": {
+                  "type": "string"
+                }
+              }
+            },
+            "original_http_ref_url": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "account_details",
+    "transaction_details"
+  ]
+}

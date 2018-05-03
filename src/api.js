@@ -1,6 +1,13 @@
 const rp = require('request-promise');
 
-module.exports = function (sandbox) {
+module.exports = function (sandbox, partnerId, apiKey) {
+  if (!partnerId) {
+    throw new Error("Missing partnerId.")
+  }
+  if (!apiKey) {
+    throw new Error("Missing apiKey.")
+  }
+
   const API_BASE = sandbox
     ? 'https://sandbox.test-simplexcc.com'
     : 'https://backend-wallet-api.simplexcc.com';
@@ -16,20 +23,34 @@ module.exports = function (sandbox) {
       requested_amount,
       end_user_id,
       client_ip,
-      wallet_id: process.env.SIMPLEX_PARTNER_ID,
+      wallet_id: partnerId,
     }
     const options = {
       method: 'POST',
       uri: API_BASE + '/wallet/merchant/v2/quote',
       headers: {
-        Authorization: `ApiKey ${process.env.SIMPLEX_API_KEY}`
+        Authorization: `ApiKey ${apiKey}`
       },
       body: data,
       json: true
     }
     return rp(options)
   }
+
+  function getPartnerData(data, client_ip) {
+    const options = {
+      method: 'POST',
+      uri: API_BASE + '/wallet/merchant/v2/payments/partner/data',
+      headers: {
+        Authorization: `ApiKey ${apiKey}`
+      },
+      body: data,
+      json: true
+    }
+    console.log(options)
+    return rp(options)
+  }
   return {
-    getQuote
+    getQuote, getPartnerData
   }
 }
