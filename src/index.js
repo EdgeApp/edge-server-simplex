@@ -23,6 +23,9 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE')
   next()
 })
+app.get('/redirect', function (req, res) {
+  res.redirect('edge-ret://plugins/simplex')
+})
 app.post('/quote', async function (req, res) {
   console.log(req.body)
   if (!ajv.validate('quote', req.body)) {
