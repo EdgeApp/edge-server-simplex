@@ -1,5 +1,6 @@
 require('dotenv').config()
 
+const morgan = require('morgan')
 const express = require('express')
 const bodyParser = require('body-parser')
 const api = require('./api')(
@@ -7,6 +8,12 @@ const api = require('./api')(
   process.env.SIMPLEX_PARTNER_ID,
   process.env.SIMPLEX_API_KEY)
 const Ajv = require('ajv')
+
+// Added request header to logging
+morgan.token('x-forwarded-for', function (req, res) {
+  return req.headers['x-forwarded-for']
+})
+const logFormat = ':x-forwarded-for - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status'
 
 /* Setup json-schema parser */
 const ajv = new Ajv()
@@ -16,6 +23,7 @@ ajv.addSchema(quoteSchema, 'quote')
 ajv.addSchema(partnerDataSchema, 'partner-data')
 
 const app = express()
+app.use(morgan(logFormat))
 app.use(bodyParser.json())
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*')

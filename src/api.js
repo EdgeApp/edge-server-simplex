@@ -49,7 +49,6 @@ module.exports = function (sandbox, partnerId, apiKey) {
       body: newData,
       json: true
     }
-    console.log(options)
     return rp(options)
   }
   return {
