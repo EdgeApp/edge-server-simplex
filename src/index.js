@@ -13,7 +13,7 @@ const Ajv = require('ajv')
 morgan.token('x-forwarded-for', function (req, res) {
   return req.headers['x-forwarded-for']
 })
-const logFormat = ':x-forwarded-for - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status'
+const logFormat = ':x-forwarded-for [:date[clf]] ":method :url HTTP/:http-version" :status'
 
 /* Setup json-schema parser */
 const ajv = new Ajv()
