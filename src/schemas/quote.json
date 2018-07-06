@@ -17,6 +17,7 @@
     },
     "requested_amount": {
       "type": "number",
+      "exclusiveMinimum": 0,
       "description": "how much of the requested_currency is wanted"
     },
     "client_id": {
