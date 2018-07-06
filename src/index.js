@@ -22,6 +22,12 @@ const partnerDataSchema = require('./schemas/partner-data.json')
 ajv.addSchema(quoteSchema, 'quote')
 ajv.addSchema(partnerDataSchema, 'partner-data')
 
+const clientIp = (req) => {
+  return process.env.IP_ADDRESS_OVERRIDE
+    || req.headers['x-forwarded-for']
+    || req.connection.remoteAddress
+}
+
 const app = express()
 app.use(morgan(logFormat))
 app.use(bodyParser.json())
@@ -39,9 +45,6 @@ app.post('/quote', async function (req, res) {
   if (!ajv.validate('quote', req.body)) {
     return res.status(403).json({res:null, err:ajv.errors})
   }
-  const client_ip = process.env.IP_ADDRESS_OVERRIDE
-                 || req.headers['x-forwarded-for']
-                 || req.connection.remoteAddress
   try {
     const response = await api.getQuote(
       req.body.digital_currency,
@@ -49,7 +52,7 @@ app.post('/quote', async function (req, res) {
       req.body.requested_currency,
       req.body.requested_amount,
       req.body.client_id,
-      client_ip
+      clientIp(req)
     )
     res.json({res:response, err:null})
   } catch (e) {
@@ -66,7 +69,8 @@ app.post('/partner/data', async function (req, res) {
                  || req.headers['x-forwarded-for']
                  || req.connection.remoteAddress
   try {
-    const response = await api.getPartnerData(req.body, client_ip)
+    const response = await api.getPartnerData(
+      req.body, clientIp(req))
     res.json({res:response, err:null})
   } catch (e) {
     console.log(e.message)
