@@ -9,6 +9,17 @@ required variables.
 yarn
 yarn start
 
+## Include the events API
+
+cd docker
+docker-compose up -d
+./setup_db.sh
+
+cd ..
+node src/migrate
+node src/poll
+yarn start
+
 ## Running...forever
 
 ```

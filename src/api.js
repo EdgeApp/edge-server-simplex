@@ -27,7 +27,7 @@ module.exports = function (sandbox, partnerId, apiKey) {
     }
     const options = {
       method: 'POST',
-      uri: API_BASE + '/wallet/merchant/v2/quote',
+      uri: `${API_BASE}/wallet/merchant/v2/quote`,
       headers: {
         Authorization: `ApiKey ${apiKey}`
       },
@@ -42,7 +42,7 @@ module.exports = function (sandbox, partnerId, apiKey) {
     newData['account_details']['signup_login']['ip'] = client_ip
     const options = {
       method: 'POST',
-      uri: API_BASE + '/wallet/merchant/v2/payments/partner/data',
+      uri: `${API_BASE}/wallet/merchant/v2/payments/partner/data`,
       headers: {
         Authorization: `ApiKey ${apiKey}`
       },
@@ -51,7 +51,32 @@ module.exports = function (sandbox, partnerId, apiKey) {
     }
     return rp(options)
   }
+
+  function getEvents(userId) {
+    const options = {
+      method: 'GET',
+      uri: `${API_BASE}/wallet/merchant/v2/events/`,
+      headers: {
+        Authorization: `ApiKey ${apiKey}`
+      },
+      json: true
+    }
+    return rp(options)
+  }
+
+  function eventDelete(eventId) {
+    const options = {
+      method: 'DELETE',
+      uri: `${API_BASE}/wallet/merchant/v2/events/${eventId}`,
+      headers: {
+        Authorization: `ApiKey ${apiKey}`
+      },
+      json: true
+    }
+    return rp(options)
+  }
+
   return {
-    getQuote, getPartnerData
+    getQuote, getPartnerData, getEvents, eventDelete
   }
 }

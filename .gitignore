@@ -7,3 +7,5 @@
 /lib
 yarn-error.log
 .env
+/docker/.pgdata
+/docker/.pgpass
