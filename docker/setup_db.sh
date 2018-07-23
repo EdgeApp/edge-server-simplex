@@ -11,7 +11,7 @@ DOCKER_CMD="docker run \
      --rm -i -t governmentpaas/psql"
 
 function psql_command {
- $DOCKER_CMD psql -h $DB_IP -p 5432 -c "$1"
+ $DOCKER_CMD psql -h $DB_IP -p $PORT -c "$1"
 }
 
 # NOTE: There has to be a better way to do this with less repetition
