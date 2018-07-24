@@ -22,11 +22,11 @@ const PaymentRequest = sequelize.define('payment_requests', {
   },
   quote_id: {
     type: Sequelize.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   order_id: {
     type: Sequelize.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   fiat_total_amount: {
     type: Sequelize.STRING
@@ -175,8 +175,14 @@ async function eventCreate (event) {
   if (!request) {
     requestCreate(event.payment.partner_end_user_id, {
       payment_id: event.payment.id,
-      fiat_total_amount: event.payment.fiat_total_amount.amount,
-      fiat_currency: event.payment.fiat_total_amount.currency,
+      fiat_total_amount: {
+        amount: event.payment.fiat_total_amount.amount,
+        currency: event.payment.fiat_total_amount.currency,
+      },
+      requested_digital_amount: {
+        amount: null,
+        currency: null
+      }
     })
   }
   let newEvent = await Event.findOrCreate({
