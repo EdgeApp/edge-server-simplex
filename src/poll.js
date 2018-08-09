@@ -16,13 +16,11 @@ api.getEvents()
     for (var i = 0; i < events.length; ++i) {
       try {
         await models.eventCreate(events[i])
-          /*
         try {
           await api.eventDelete(events[i].event_id)
         } catch (e) {
           console.log(`Unable to delete ${events[i].event_id}`)
         }
-        */
       } catch (e) {
         console.log(e)
       }
