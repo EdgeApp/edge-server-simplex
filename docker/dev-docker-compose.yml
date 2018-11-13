@@ -3,7 +3,6 @@ version: '2'
 services:
   postgres:
     image: postgres
-    restart: always
     environment:
       POSTGRES_PASSWORD: p@ssw0rd
     ports:

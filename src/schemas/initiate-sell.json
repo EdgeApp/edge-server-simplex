@@ -1,0 +1,29 @@
+{
+  "title": "initiate-sell",
+  "description": "",
+  "type": "object",
+  "properties": {
+    "quote_id": {
+      "type": "string",
+      "description": "the id of the quote from the getQuote endpoint"
+    },
+    "return_url": {
+      "type": "string",
+      "description": "a uri to redirect back to the app after simplex's intake"
+    },
+    "refund_crypto_address": {
+      "type": "string",
+      "description": "the address to refund the crypto to if something goes wrong"
+    },
+    "account_id": {
+      "type": "string",
+      "description": "the user id"
+    }
+  },
+  "required": [
+    "quote_id",
+    "return_url",
+    "refund_crypto_address",
+    "account_id"
+  ]
+}

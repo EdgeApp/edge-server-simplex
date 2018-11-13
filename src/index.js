@@ -1,13 +1,18 @@
 require('dotenv').config()
 
 const morgan = require('morgan')
+const cors = require('cors')
 const express = require('express')
 const bodyParser = require('body-parser')
 const models = require('./models')
-const api = require('./api')(
+const buyApi = require('./buy')(
   process.env.SIMPLEX_SANDBOX === 'true',
   process.env.SIMPLEX_PARTNER_ID,
   process.env.SIMPLEX_API_KEY)
+const sellApi = require('./sell')(
+  process.env.SIMPLEX_SANDBOX === 'true',
+  process.env.SIMPLEX_PARTNER_ID,
+  process.env.SIMPLEX_SELL_API_KEY)
 const Ajv = require('ajv')
 
 // Added request header to logging
@@ -20,8 +25,12 @@ const logFormat = ':x-forwarded-for [:date[clf]] ":method :url HTTP/:http-versio
 const ajv = new Ajv()
 const quoteSchema = require('./schemas/quote.json')
 const partnerDataSchema = require('./schemas/partner-data.json')
+const initiateSell = require('./schemas/initiate-sell.json')
+const messageResponse = require('./schemas/message-response.json')
 ajv.addSchema(quoteSchema, 'quote')
 ajv.addSchema(partnerDataSchema, 'partner-data')
+ajv.addSchema(messageResponse, 'message-response')
+ajv.addSchema(initiateSell, 'initiate-sell')
 
 const clientIp = (req) => {
   return process.env.IP_ADDRESS_OVERRIDE
@@ -30,6 +39,7 @@ const clientIp = (req) => {
 }
 
 const app = express()
+app.use(cors())
 app.use(morgan(logFormat))
 app.use(bodyParser.json())
 app.use((req, res, next) => {
@@ -46,7 +56,7 @@ app.post('/quote', async function (req, res) {
     return res.status(403).json({res:null, err:ajv.errors})
   }
   try {
-    const response = await api.getQuote(
+    const response = await buyApi.getQuote(
       req.body.digital_currency,
       req.body.fiat_currency,
       req.body.requested_currency,
@@ -69,7 +79,7 @@ app.post('/partner/data', async function (req, res) {
                  || req.headers['x-forwarded-for']
                  || req.connection.remoteAddress
   try {
-    const response = await api.getPartnerData(
+    const response = await buyApi.getPartnerData(
       req.body, clientIp(req))
     await models.requestCreate(
       req.body.account_details.app_end_user_id,
@@ -100,5 +110,32 @@ app.get('/payments/:userId/:paymentId/', async function (req, res) {
     res.status(403).json({res:null, err:e.message})
   }
 })
+
+function wrap(method, path, validator, cb) {
+  app[method](path, async function (req, res) {
+    if (validator && !ajv.validate(validator, req.body)) {
+      return res.status(403).json({res:null, err:ajv.errors})
+    }
+    try {
+      const response = await cb(req, clientIp(req))
+      console.log(response)
+      res.json({res:response, err:null})
+    } catch (e) {
+      console.log(e.message)
+      res.status(403).json({
+        res:null, err:e.message
+      })
+    }
+  })
+}
+
+wrap('get', '/sell/quote/', null, sellApi.getQuote)
+// TODO define a schema validator
+wrap('post', '/sell/initiate/', 'initiate-sell', sellApi.initiateSell)
+wrap('post', '/sell/notify-user/:txn_id/', null, sellApi.notifyUser)
+
+wrap('get',  '/sell/message/:user_id/', null, sellApi.userQueue)
+wrap('post', '/sell/message/:user_id/:msg_id/ack', null, sellApi.messageAck)
+wrap('post', '/sell/message/:user_id/:msg_id/response', 'message-response', sellApi.messageResponse)
 
 app.listen(process.env.PORT)

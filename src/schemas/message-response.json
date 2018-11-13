@@ -1,0 +1,32 @@
+{
+  "title": "message-response",
+  "description": "",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "an opaque string to identify this execute order"
+    },
+    "execution_order_id": {
+      "type": "string",
+      "description": "an opaque string to identify this execute order"
+    },
+    "status": {
+      "type": "string",
+      "description": "the status, either pending, failed or completed"
+    },
+    "crypto_amount_sent": {
+      "type": "string",
+      "description": "the amount of crypto sent"
+    },
+    "blockchain_txn_hash": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "blockchain transaction hash"
+    }
+  },
+  "required": [
+    "id",
+    "status"
+  ]
+}
