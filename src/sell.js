@@ -11,7 +11,8 @@ module.exports = function (sandbox, partnerId, apiKey) {
   }
 
   const API_BASE = sandbox
-    ? 'https://sell-sandbox.test-simplexcc.com/v1'
+    // ? 'https://sell-sandbox.test-simplexcc.com/v1'
+    ? 'https://api.test-simplexcc.com/v1'
     : 'https://api.simplexcc.com/v1';
 
   const HEADERS = {
