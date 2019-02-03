@@ -1,27 +1,27 @@
-const rp = require('request-promise');
+const rp = require('request-promise')
 
-const REFERER_URL = "https://edge.app"
+const REFERER_URL = 'https://edge.app'
 
 module.exports = function (sandbox, partnerId, apiKey) {
   if (!partnerId) {
-    throw new Error("Missing partnerId.")
+    throw new Error('Missing partnerId.')
   }
   if (!apiKey) {
-    throw new Error("Missing apiKey.")
+    throw new Error('Missing apiKey.')
   }
 
   const API_BASE = sandbox
     // ? 'https://sell-sandbox.test-simplexcc.com/v1'
-    ? 'https://api.test-simplexcc.com/v1'
-    : 'https://api.simplexcc.com/v1';
+    ? 'http://localhost:3333/v1'
+    : 'https://api.simplexcc.com/v1'
 
   const HEADERS = {
     Authorization: `apiKey ${apiKey}`
   }
 
   const encode = (params) => {
-    let data = []
-    for (var k in params) {
+    const data = []
+    for (const k in params) {
       if (params[k]) {
         data.push(k + '=' + params[k])
       }
@@ -29,7 +29,7 @@ module.exports = function (sandbox, partnerId, apiKey) {
     return data.join('&')
   }
 
-  function getQuote(req, clientIp) {
+  function getQuote (req, clientIp) {
     const data = encode(req.query)
     const options = {
       uri: `${API_BASE}/get-quote?` + data,
@@ -41,7 +41,7 @@ module.exports = function (sandbox, partnerId, apiKey) {
     return rp(options)
   }
 
-  function initiateSell(req, clientIp) {
+  function initiateSell (req, clientIp) {
     const data = {
       referer_url: REFERER_URL,
       return_url: req.body.return_url,
@@ -50,7 +50,7 @@ module.exports = function (sandbox, partnerId, apiKey) {
         refund_crypto_address: req.body.refund_crypto_address
       },
       account_details: {
-        account_id: req.body.account_id,
+        account_id: req.body.account_id
       }
     }
     const options = {
@@ -64,12 +64,12 @@ module.exports = function (sandbox, partnerId, apiKey) {
     return rp(options)
   }
 
-  async function userQueue(req) {
-    let data = await messages()
+  async function userQueue (req) {
+    const data = await messages()
     return data.messages
   }
 
-  async function notifyUser(req) {
+  async function notifyUser (req) {
     const options = {
       uri: `${API_BASE}/notify-user`,
       method: 'POST',
@@ -87,7 +87,7 @@ module.exports = function (sandbox, partnerId, apiKey) {
     return rp(options)
   }
 
-  async function messages() {
+  async function messages () {
     const options = {
       uri: `${API_BASE}/msg`,
       method: 'GET',
@@ -97,7 +97,7 @@ module.exports = function (sandbox, partnerId, apiKey) {
     return rp(options)
   }
 
-  async function messageResponse(req) {
+  async function messageResponse (req) {
     const {execution_order_id, status, crypto_amount_sent, blockchain_txn_hash} = req.body
     const options = {
       uri: `${API_BASE}/msg/${req.params.msg_id}/response`,
@@ -116,7 +116,7 @@ module.exports = function (sandbox, partnerId, apiKey) {
     return rp(options)
   }
 
-  async function messageAck(req) {
+  async function messageAck (req) {
     const options = {
       uri: `${API_BASE}/msg/${req.params.msg_id}/ack`,
       method: 'POST',
@@ -127,8 +127,12 @@ module.exports = function (sandbox, partnerId, apiKey) {
   }
 
   return {
-    getQuote, initiateSell,
-    messages, messageAck, messageResponse,
-    userQueue, notifyUser
+    getQuote,
+    initiateSell,
+    messages,
+    messageAck,
+    messageResponse,
+    userQueue,
+    notifyUser
   }
 }

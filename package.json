@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "nodemon --watch src ./src/index"
+    "dev": "nodemon $NODE_DEBUG_OPTION --watch src ./src/index"
   },
   "dependencies": {
     "cors": "^2.8.5",

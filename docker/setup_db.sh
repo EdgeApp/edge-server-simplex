@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-PORT=${1:-5432}
+PORT=${1:-5433}
 echo $PORT
 export DB_IP=127.0.0.1
 export PGUSER=postgres
