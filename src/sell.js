@@ -1,4 +1,5 @@
 const rp = require('request-promise')
+const models = require('./models')
 
 const REFERER_URL = 'https://edge.app'
 
@@ -41,7 +42,7 @@ module.exports = function (sandbox, partnerId, apiKey) {
     return rp(options)
   }
 
-  function initiateSell (req, clientIp) {
+  async function initiateSell (req, clientIp) {
     const data = {
       referer_url: REFERER_URL,
       return_url: req.body.return_url,
@@ -61,21 +62,23 @@ module.exports = function (sandbox, partnerId, apiKey) {
       json: true
     }
     console.log(options)
-    return rp(options)
+    const res = await rp(options)
+    await models.createTransaction(res)
+    return res
   }
 
-  async function userQueue (req) {
-    const data = await messages()
-    return data.messages
-  }
+  // async function userQueue (req) {
+  //   const data = await messages()
+  //   return data.messages
+  // }
 
-  async function notifyUser (req) {
+  async function notifyUser (txnId) {
     const options = {
       uri: `${API_BASE}/notify-user`,
       method: 'POST',
       headers: HEADERS,
-      data: {
-        txn_id: req.params.txn_id,
+      body: {
+        txn_id: txnId,
         template_name: 'execution-order-deeplink',
         template_params: {
           deeplink: 'edge://plugins/simplex'
@@ -86,53 +89,53 @@ module.exports = function (sandbox, partnerId, apiKey) {
     console.log(options)
     return rp(options)
   }
-
-  async function messages () {
-    const options = {
-      uri: `${API_BASE}/msg`,
-      method: 'GET',
-      headers: HEADERS,
-      json: true
-    }
-    return rp(options)
-  }
-
-  async function messageResponse (req) {
-    const {execution_order_id, status, crypto_amount_sent, blockchain_txn_hash} = req.body
-    const options = {
-      uri: `${API_BASE}/msg/${req.params.msg_id}/response`,
-      method: 'POST',
-      headers: HEADERS,
-      data: JSON.stringify({
-        id: execution_order_id,
-        execution_order_id: execution_order_id,
-        status: status,
-        crypto_amount_sent: crypto_amount_sent,
-        blockchain_txn_hash: blockchain_txn_hash
-      }),
-      json: true
-    }
-    console.log(options)
-    return rp(options)
-  }
-
-  async function messageAck (req) {
-    const options = {
-      uri: `${API_BASE}/msg/${req.params.msg_id}/ack`,
-      method: 'POST',
-      headers: HEADERS,
-      json: true
-    }
-    return rp(options)
-  }
+  //
+  // async function messages () {
+  //   const options = {
+  //     uri: `${API_BASE}/msg`,
+  //     method: 'GET',
+  //     headers: HEADERS,
+  //     json: true
+  //   }
+  //   return rp(options)
+  // }
+  //
+  // async function messageResponse (req) {
+  //   const {execution_order_id, status, crypto_amount_sent, blockchain_txn_hash} = req.body
+  //   const options = {
+  //     uri: `${API_BASE}/msg/${req.params.msg_id}/response`,
+  //     method: 'POST',
+  //     headers: HEADERS,
+  //     data: JSON.stringify({
+  //       id: execution_order_id,
+  //       execution_order_id: execution_order_id,
+  //       status: status,
+  //       crypto_amount_sent: crypto_amount_sent,
+  //       blockchain_txn_hash: blockchain_txn_hash
+  //     }),
+  //     json: true
+  //   }
+  //   console.log(options)
+  //   return rp(options)
+  // }
+  //
+  // async function messageAck (req) {
+  //   const options = {
+  //     uri: `${API_BASE}/msg/${req.params.msg_id}/ack`,
+  //     method: 'POST',
+  //     headers: HEADERS,
+  //     json: true
+  //   }
+  //   return rp(options)
+  // }
 
   return {
     getQuote,
     initiateSell,
-    messages,
-    messageAck,
-    messageResponse,
-    userQueue,
+    // messages,
+    // messageAck,
+    // messageResponse,
+    // userQueue,
     notifyUser
   }
 }

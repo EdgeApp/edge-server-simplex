@@ -1,5 +1,7 @@
 const Sequelize = require('sequelize')
-const Op = Sequelize.Op;
+const uuidv4 = require('uuid/v4')
+
+const Op = Sequelize.Op
 
 const sequelize = new Sequelize(
   process.env.DB_NAME,
@@ -10,23 +12,91 @@ const sequelize = new Sequelize(
     port: process.env.DB_PORT,
     dialect: 'postgres',
     pool: {max: 5, min: 0, idle: 10000},
-    omitNull: true,
+    omitNull: true
   })
 
+const Transactions = sequelize.define('transactions', {
+  id: {
+    primaryKey: true,
+    type: Sequelize.UUID,
+    allowNull: false
+  },
+  external_id: {
+    type: Sequelize.STRING,
+    allowNull: false
+  },
+  txn_url: {
+    type: Sequelize.STRING,
+    allowNull: false
+  },
+  crypto_amount_sent: {
+    type: Sequelize.STRING
+  },
+  blockchain_txn_hash: {
+    type: Sequelize.STRING
+  },
+  send_request_at: {
+    type: Sequelize.DATE
+  },
+  sent_at: {
+    type: Sequelize.DATE
+  },
+  refund_at: {
+    type: Sequelize.DATE
+  }
+})
+
+const SendCryptoRequests = sequelize.define('send_crypto_requests', {
+  id: {
+    primaryKey: true,
+    type: Sequelize.UUID,
+    allowNull: false
+  },
+  reason: {
+    type: Sequelize.STRING,
+    allowNull: true
+  },
+  quote_id: {
+    type: Sequelize.STRING,
+    allowNull: true
+  },
+  txn_id: {
+    type: Sequelize.STRING,
+    allowNull: true
+  },
+  user_id: {
+    type: Sequelize.STRING
+  },
+  user_aka_ids: {
+    type: Sequelize.STRING
+  },
+  account_id: {
+    type: Sequelize.STRING
+  },
+  crypto_currency: {
+    type: Sequelize.STRING
+  },
+  crypto_amount: {
+    type: Sequelize.STRING
+  },
+  destination_crypto_address: {
+    type: Sequelize.STRING
+  }
+})
 
 const PaymentRequest = sequelize.define('payment_requests', {
   payment_id: {
     primaryKey: true,
     type: Sequelize.STRING,
-    allowNull: false,
+    allowNull: false
   },
   quote_id: {
     type: Sequelize.STRING,
-    allowNull: true,
+    allowNull: true
   },
   order_id: {
     type: Sequelize.STRING,
-    allowNull: true,
+    allowNull: true
   },
   fiat_total_amount: {
     type: Sequelize.STRING
@@ -54,15 +124,15 @@ const Event = sequelize.define('events', {
   id: {
     primaryKey: true,
     type: Sequelize.STRING,
-    allowNull: false,
+    allowNull: false
   },
   name: {
     type: Sequelize.STRING,
-    allowNull: false,
+    allowNull: false
   },
   payment_status: {
     type: Sequelize.STRING,
-    allowNull: true,
+    allowNull: true
   },
   payment_created_at: {
     type: Sequelize.DATE
@@ -82,16 +152,18 @@ const Event = sequelize.define('events', {
   payment_id: {
     references: {
       model: PaymentRequest,
-      key: 'payment_id',
+      key: 'payment_id'
     },
     type: Sequelize.STRING,
-    allowNull: true,
+    allowNull: true
   }
 }, { timestamps: false })
 
 async function migrate () {
+  await SendCryptoRequests.sync({force: true})
   await PaymentRequest.sync({force: true})
-  return Event.sync({force: true})
+  await Event.sync({force: true})
+  await Transactions.sync({force: true})
 }
 
 function serializePayment (data) {
@@ -104,22 +176,23 @@ function serializePayment (data) {
     fiat_total_amount: data.fiat_total_amount,
     fiat_currency: data.fiat_currency,
     requested_digital_amount: data.requested_digital_amount,
-    requested_digital_currency: data.requested_digital_currency,
+    requested_digital_currency: data.requested_digital_currency
   }
 }
 
 function payments (userId) {
   return PaymentRequest.findAll({
-    where: { user_id: userId, payment_status: {
-        [Op.ne]: "notsubmitted"
-      },
+    where: { user_id: userId,
+      payment_status: {
+        [Op.ne]: 'notsubmitted'
+      }
     },
     order: [
       ['createdAt', 'DESC']
     ]
-  }).then(function(data) {
+  }).then(function (data) {
     return data.map(function (request) {
-      return serializePayment(request.dataValues);
+      return serializePayment(request.dataValues)
     })
   })
 }
@@ -136,27 +209,53 @@ function requestCreate (userId, payment) {
       fiat_total_amount: payment.fiat_total_amount.amount,
       fiat_currency: payment.fiat_total_amount.currency,
       requested_digital_amount: payment.requested_digital_amount.amount,
-      requested_digital_currency: payment.requested_digital_amount.currency,
+      requested_digital_currency: payment.requested_digital_amount.currency
     }
+  })
+}
+function createSendCryptoRequest (request) {
+  return SendCryptoRequests.create({
+    id: uuidv4(),
+    reason: request.reason,
+    txn_id: request.txn_id,
+    user_id: request.user_id,
+    quote_id: request.quote_id,
+    account_id: request.account_id,
+    crypto_currency: request.crypto_currency,
+    crypto_amount: request.crypto_amount,
+    destination_crypto_address: request.destination_crypto_address
+  })
+}
+
+function createTransaction (request) {
+  return Transactions.create({
+    id: uuidv4(),
+    external_id: request.txn_id,
+    txn_url: request.txn_url,
+    crypto_amount_sent: null,
+    blockchain_txn_hash: null,
+    send_request_at: null,
+    sent_at: null,
+    refund_at: null
   })
 }
 
 async function events (userId, paymentId) {
-  let request = await PaymentRequest.findOne({
+  const request = await PaymentRequest.findOne({
     where: {
       user_id: userId,
       payment_id: paymentId
     }
   })
-  let payment = serializePayment(request)
+  const payment = serializePayment(request)
   return Event.findAll({
     where: {
       user_id: userId,
       payment_id: paymentId
     }
-  }).then(function(data) {
-    payment.events = data.map(function(event) {
-      var data = event.dataValues
+  }).then(function (data) {
+    payment.events = data.map(function (event) {
+      const data = event.dataValues
       return {
         id: data.id,
         name: data.name,
@@ -171,13 +270,13 @@ async function events (userId, paymentId) {
 }
 
 async function eventCreate (event) {
-  let request = await PaymentRequest.findById(event.payment.id)
+  const request = await PaymentRequest.findById(event.payment.id)
   if (!request) {
     requestCreate(event.payment.partner_end_user_id, {
       payment_id: event.payment.id,
       fiat_total_amount: {
         amount: event.payment.fiat_total_amount.amount,
-        currency: event.payment.fiat_total_amount.currency,
+        currency: event.payment.fiat_total_amount.currency
       },
       requested_digital_amount: {
         amount: null,
@@ -185,7 +284,7 @@ async function eventCreate (event) {
       }
     })
   }
-  let newEvent = await Event.findOrCreate({
+  const newEvent = await Event.findOrCreate({
     where: {
       id: event.event_id
     },
@@ -207,4 +306,4 @@ async function eventCreate (event) {
   return newEvent
 }
 
-module.exports = { events, eventCreate, payments, requestCreate, migrate }
+module.exports = { events, eventCreate, payments, requestCreate, migrate, createSendCryptoRequest, createTransaction }

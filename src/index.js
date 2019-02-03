@@ -33,11 +33,18 @@ ajv.addSchema(messageResponse, 'message-response')
 ajv.addSchema(initiateSell, 'initiate-sell')
 
 const clientIp = (req) => {
-  return process.env.IP_ADDRESS_OVERRIDE
-    || req.headers['x-forwarded-for']
-    || req.connection.remoteAddress
+  return process.env.IP_ADDRESS_OVERRIDE ||
+    req.headers['x-forwarded-for'] ||
+    req.connection.remoteAddress
 }
 
+const authenticateSimplex = (req, res, next) => {
+  if (req.query._apikey === process.env.EDGE_API_KEY) {
+    next()
+  } else {
+    return res.status(403).json({res: null, err: 'unauthorized'})
+  }
+}
 const app = express()
 app.use(cors())
 app.use(morgan(logFormat))
@@ -51,9 +58,10 @@ app.use((req, res, next) => {
 app.get('/redirect', function (req, res) {
   res.redirect('edge-ret://plugins/simplex')
 })
+
 app.post('/quote', async function (req, res) {
   if (!ajv.validate('quote', req.body)) {
-    return res.status(403).json({res:null, err:ajv.errors})
+    return res.status(403).json({res: null, err: ajv.errors})
   }
   try {
     const response = await buyApi.getQuote(
@@ -64,66 +72,75 @@ app.post('/quote', async function (req, res) {
       req.body.client_id,
       clientIp(req)
     )
-    res.json({res:response, err:null})
+    res.json({res: response, err: null})
   } catch (e) {
     console.log(e.message)
-    res.status(403).json({res:null, err:e.message})
+    res.status(403).json({res: null, err: e.message})
   }
 })
 
 app.post('/partner/data', async function (req, res) {
   if (!ajv.validate('partner-data', req.body)) {
-    return res.status(403).json({res:null, err:ajv.errors})
+    return res.status(403).json({res: null, err: ajv.errors})
   }
-  const client_ip = process.env.IP_ADDRESS_OVERRIDE
-                 || req.headers['x-forwarded-for']
-                 || req.connection.remoteAddress
   try {
     const response = await buyApi.getPartnerData(
       req.body, clientIp(req))
     await models.requestCreate(
       req.body.account_details.app_end_user_id,
       req.body.transaction_details.payment_details)
-    res.json({res:response, err:null})
+    res.json({res: response, err: null})
   } catch (e) {
     console.log(e.message)
-    res.status(403).json({res:null, err:e.message})
+    res.status(403).json({res: null, err: e.message})
   }
+})
+
+app.post('/send-crypto', authenticateSimplex, async function (req, res) {
+  const request = req.body
+  await models.createSendCryptoRequest(request)
+  await sellApi.notifyUser(request.txn_id)
+  res.json({
+    'execution_order': {
+      'id': 'xo:7791528',
+      'status': 'pending'
+    }
+  })
 })
 
 app.get('/payments/:userId/', async function (req, res) {
   try {
     const response = await models.payments(req.params.userId)
-    res.json({res:response, err:null})
+    res.json({res: response, err: null})
   } catch (e) {
     console.log(e.message)
-    res.status(403).json({res:null, err:e.message})
+    res.status(403).json({res: null, err: e.message})
   }
 })
 
 app.get('/payments/:userId/:paymentId/', async function (req, res) {
   try {
     const response = await models.events(req.params.userId, req.params.paymentId)
-    res.json({res:response, err:null})
+    res.json({res: response, err: null})
   } catch (e) {
     console.log(e.message)
-    res.status(403).json({res:null, err:e.message})
+    res.status(403).json({res: null, err: e.message})
   }
 })
 
-function wrap(method, path, validator, cb) {
+function wrap (method, path, validator, cb) {
   app[method](path, async function (req, res) {
     if (validator && !ajv.validate(validator, req.body)) {
-      return res.status(403).json({res:null, err:ajv.errors})
+      return res.status(403).json({res: null, err: ajv.errors})
     }
     try {
       const response = await cb(req, clientIp(req))
       console.log(response)
-      res.json({res:response, err:null})
+      res.json({res: response, err: null})
     } catch (e) {
       console.log(e.message)
       res.status(403).json({
-        res:null, err:e.message
+        res: null, err: e.message
       })
     }
   })
@@ -132,9 +149,8 @@ function wrap(method, path, validator, cb) {
 wrap('get', '/sell/quote/', null, sellApi.getQuote)
 // TODO define a schema validator
 wrap('post', '/sell/initiate/', 'initiate-sell', sellApi.initiateSell)
-wrap('post', '/sell/notify-user/:txn_id/', null, sellApi.notifyUser)
 
-wrap('get',  '/sell/message/:user_id/', null, sellApi.userQueue)
+wrap('get', '/sell/message/:user_id/', null, sellApi.userQueue)
 wrap('post', '/sell/message/:user_id/:msg_id/ack', null, sellApi.messageAck)
 wrap('post', '/sell/message/:user_id/:msg_id/response', 'message-response', sellApi.messageResponse)
 
