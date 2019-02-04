@@ -30,6 +30,17 @@ module.exports = function (sandbox, partnerId, apiKey) {
     return data.join('&')
   }
 
+  const sendCryptoStatusEvent = (sendCryptoId, status, crytoAmountSent, txnHash) => {
+    return {
+      execution_order: {
+        id: sendCryptoId,
+        status: status,
+        crypto_amount_sent: crytoAmountSent,
+        blockchain_txn_hash: txnHash
+      }
+    }
+  }
+
   function getQuote (req, clientIp) {
     const data = encode(req.query)
     const options = {
@@ -72,7 +83,7 @@ module.exports = function (sandbox, partnerId, apiKey) {
   //   return data.messages
   // }
 
-  async function notifyUser (txnId) {
+  async function notifyUser (txnId, sendCryptoRequestId) {
     const options = {
       uri: `${API_BASE}/notify-user`,
       method: 'POST',
@@ -81,9 +92,21 @@ module.exports = function (sandbox, partnerId, apiKey) {
         txn_id: txnId,
         template_name: 'execution-order-deeplink',
         template_params: {
-          deeplink: 'edge://plugins/simplex'
+          deeplink: `http://localhost:3000/#/sell/send-crypto-requests/${sendCryptoRequestId}`
         }
       },
+      json: true
+    }
+    console.log(options)
+    return rp(options)
+  }
+  async function notifySendCryptoStatus (sendCryptoRequest) {
+    const {sendCryptoId, status, cryptoAmountSent, txnHash} = sendCryptoRequest
+    const options = {
+      uri: `${API_BASE}/execution-order-notify-status`,
+      method: 'POST',
+      headers: HEADERS,
+      body: sendCryptoStatusEvent(sendCryptoId, status, cryptoAmountSent, txnHash),
       json: true
     }
     console.log(options)
@@ -132,10 +155,7 @@ module.exports = function (sandbox, partnerId, apiKey) {
   return {
     getQuote,
     initiateSell,
-    // messages,
-    // messageAck,
-    // messageResponse,
-    // userQueue,
+    notifySendCryptoStatus,
     notifyUser
   }
 }

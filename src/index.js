@@ -98,14 +98,31 @@ app.post('/partner/data', async function (req, res) {
 
 app.post('/send-crypto', authenticateSimplex, async function (req, res) {
   const request = req.body
-  await models.createSendCryptoRequest(request)
-  await sellApi.notifyUser(request.txn_id)
+  const sendCryptoRequest = await models.createSendCryptoRequest(request)
+  await sellApi.notifyUser(request.txn_id, sendCryptoRequest.id)
   res.json({
     'execution_order': {
-      'id': 'xo:7791528',
+      'id': sendCryptoRequest.id,
       'status': 'pending'
     }
   })
+})
+
+app.post('/send-crypto-completed', async function (req, res) {
+  const {sendCryptoId, status, cryptoAmountSent, txnHash} = req.body
+  await models.updateSendCrypto(sendCryptoId, status, cryptoAmountSent, txnHash)
+  await sellApi.notifySendCryptoStatus({sendCryptoId, status, cryptoAmountSent, txnHash})
+  res.send()
+})
+
+app.get('/sendCryptoRequests/', async function (req, res) {
+  try {
+    const response = await models.sendCryptoRequest(req.query.sendCryptoId)
+    res.json({res: response, err: null})
+  } catch (e) {
+    console.log(e.message)
+    res.status(403).json({res: null, err: e.message})
+  }
 })
 
 app.get('/payments/:userId/', async function (req, res) {

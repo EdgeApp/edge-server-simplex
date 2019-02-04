@@ -28,21 +28,6 @@ const Transactions = sequelize.define('transactions', {
   txn_url: {
     type: Sequelize.STRING,
     allowNull: false
-  },
-  crypto_amount_sent: {
-    type: Sequelize.STRING
-  },
-  blockchain_txn_hash: {
-    type: Sequelize.STRING
-  },
-  send_request_at: {
-    type: Sequelize.DATE
-  },
-  sent_at: {
-    type: Sequelize.DATE
-  },
-  refund_at: {
-    type: Sequelize.DATE
   }
 })
 
@@ -67,9 +52,6 @@ const SendCryptoRequests = sequelize.define('send_crypto_requests', {
   user_id: {
     type: Sequelize.STRING
   },
-  user_aka_ids: {
-    type: Sequelize.STRING
-  },
   account_id: {
     type: Sequelize.STRING
   },
@@ -81,8 +63,20 @@ const SendCryptoRequests = sequelize.define('send_crypto_requests', {
   },
   destination_crypto_address: {
     type: Sequelize.STRING
+  },
+  crypto_amount_sent: {
+    type: Sequelize.STRING
+  },
+  blockchain_txn_hash: {
+    type: Sequelize.STRING
+  },
+  sent_at: {
+    type: Sequelize.DATE
+  },
+  canceled_at: {
+    type: Sequelize.DATE
   }
-})
+}, {underscored: true})
 
 const PaymentRequest = sequelize.define('payment_requests', {
   payment_id: {
@@ -213,6 +207,35 @@ function requestCreate (userId, payment) {
     }
   })
 }
+function sendCryptoRequest (requestId) {
+  return SendCryptoRequests.find({where: {
+    id: requestId,
+    sent_at: null,
+    canceled_at: null
+  }})
+}
+
+function updateSendCrypto (sendCryptoId, status, cryptoAmountSent, txnHash) {
+  let sendAt = null
+  let canceledAt = null
+  if (status === 'completed') {
+    sendAt = new Date()
+  } else {
+    canceledAt = new Date()
+  }
+  return SendCryptoRequests.update(
+    {
+      crypto_amount_sent: cryptoAmountSent,
+      blockchain_txn_hash: txnHash,
+      sent_at: sendAt,
+      canceled_at: canceledAt
+    }, {
+      where: {
+        id: sendCryptoId
+      }
+    })
+}
+
 function createSendCryptoRequest (request) {
   return SendCryptoRequests.create({
     id: uuidv4(),
@@ -306,4 +329,14 @@ async function eventCreate (event) {
   return newEvent
 }
 
-module.exports = { events, eventCreate, payments, requestCreate, migrate, createSendCryptoRequest, createTransaction }
+module.exports = {
+  events,
+  eventCreate,
+  payments,
+  requestCreate,
+  migrate,
+  createSendCryptoRequest,
+  createTransaction,
+  sendCryptoRequest,
+  updateSendCrypto
+}
