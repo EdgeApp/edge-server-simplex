@@ -1,28 +1,29 @@
-const rp = require('request-promise')
+const rp = require('request-promise');
 const models = require('./models')
 
-const REFERER_URL = 'https://edge.app'
+const REFERER_URL = "https://edge.app"
 
 module.exports = function (sandbox, partnerId, apiKey) {
   if (!partnerId) {
-    throw new Error('Missing partnerId.')
+    throw new Error("Missing partnerId.")
   }
   if (!apiKey) {
-    throw new Error('Missing apiKey.')
+    throw new Error("Missing apiKey.")
   }
 
   const API_BASE = sandbox
     // ? 'https://sell-sandbox.test-simplexcc.com/v1'
-    ? 'http://localhost:3333/v1'
-    : 'https://api.simplexcc.com/v1'
+    // ? 'https://api.test-simplexcc.com/v1'
+    ? 'https://api.test-simplexcc.com/v1'
+    : 'https://api.simplexcc.com/v1';
 
   const HEADERS = {
     Authorization: `apiKey ${apiKey}`
   }
 
   const encode = (params) => {
-    const data = []
-    for (const k in params) {
+    let data = []
+    for (var k in params) {
       if (params[k]) {
         data.push(k + '=' + params[k])
       }
@@ -81,8 +82,10 @@ module.exports = function (sandbox, partnerId, apiKey) {
   }
 
   // async function userQueue (req) {
-  //   const data = await messages()
-  //   return data.messages
+  //   const data = await models.SendCrypto({
+  //     where: { account_id: req.params.userid }
+  //   })
+  //   return data
   // }
 
   async function notifyUser (txnId, sendCryptoRequestId) {

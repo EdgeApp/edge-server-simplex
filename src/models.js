@@ -13,8 +13,84 @@ const sequelize = new Sequelize(
     port: config.port,
     dialect: 'postgres',
     pool: { max: 5, min: 0, idle: 10000 },
-    omitNull: true
+    omitNull: true,
   })
+
+
+const PaymentRequest = sequelize.define('payment_requests', {
+  payment_id: {
+    primaryKey: true,
+    type: Sequelize.STRING,
+    allowNull: false,
+  },
+  quote_id: {
+    type: Sequelize.STRING,
+    allowNull: true,
+  },
+  order_id: {
+    type: Sequelize.STRING,
+    allowNull: true,
+  },
+  fiat_total_amount: {
+    type: Sequelize.STRING
+  },
+  fiat_currency: {
+    type: Sequelize.STRING
+  },
+  requested_digital_amount: {
+    type: Sequelize.STRING
+  },
+  requested_digital_currency: {
+    type: Sequelize.STRING
+  },
+  payment_status: {
+    type: Sequelize.STRING,
+    allowNull: true,
+    defaultValue: 'notsubmitted'
+  },
+  user_id: {
+    type: Sequelize.STRING
+  }
+})
+
+const Event = sequelize.define('events', {
+  id: {
+    primaryKey: true,
+    type: Sequelize.STRING,
+    allowNull: false,
+  },
+  name: {
+    type: Sequelize.STRING,
+    allowNull: false,
+  },
+  payment_status: {
+    type: Sequelize.STRING,
+    allowNull: true,
+  },
+  payment_created_at: {
+    type: Sequelize.DATE
+  },
+  payment_updated_at: {
+    type: Sequelize.DATE
+  },
+  fiat_total_amount: {
+    type: Sequelize.STRING
+  },
+  fiat_currency: {
+    type: Sequelize.STRING
+  },
+  user_id: {
+    type: Sequelize.STRING
+  },
+  payment_id: {
+    references: {
+      model: PaymentRequest,
+      key: 'payment_id',
+    },
+    type: Sequelize.STRING,
+    allowNull: true,
+  }
+}, { timestamps: false })
 
 const SellRequest = sequelize.define('sell_requests', {
   txn_id: {
@@ -89,82 +165,6 @@ const SendCrypto = sequelize.define('send_cryptos', {
     allowNull: true
   }
 })
-
-const PaymentRequest = sequelize.define('payment_requests', {
-  payment_id: {
-    primaryKey: true,
-    type: Sequelize.STRING,
-    allowNull: false
-  },
-  quote_id: {
-    type: Sequelize.STRING,
-    allowNull: true
-  },
-  order_id: {
-    type: Sequelize.STRING,
-    allowNull: true
-  },
-  fiat_total_amount: {
-    type: Sequelize.STRING
-  },
-  fiat_currency: {
-    type: Sequelize.STRING
-  },
-  requested_digital_amount: {
-    type: Sequelize.STRING
-  },
-  requested_digital_currency: {
-    type: Sequelize.STRING
-  },
-  payment_status: {
-    type: Sequelize.STRING,
-    allowNull: true,
-    defaultValue: 'notsubmitted'
-  },
-  user_id: {
-    type: Sequelize.STRING
-  }
-})
-
-const Event = sequelize.define('events', {
-  id: {
-    primaryKey: true,
-    type: Sequelize.STRING,
-    allowNull: false
-  },
-  name: {
-    type: Sequelize.STRING,
-    allowNull: false
-  },
-  payment_status: {
-    type: Sequelize.STRING,
-    allowNull: true
-  },
-  payment_created_at: {
-    type: Sequelize.DATE
-  },
-  payment_updated_at: {
-    type: Sequelize.DATE
-  },
-  fiat_total_amount: {
-    type: Sequelize.STRING
-  },
-  fiat_currency: {
-    type: Sequelize.STRING
-  },
-  user_id: {
-    type: Sequelize.STRING
-  },
-  payment_id: {
-    references: {
-      model: PaymentRequest,
-      key: 'payment_id'
-    },
-    type: Sequelize.STRING,
-    allowNull: true
-  }
-}, { timestamps: false })
-
 async function migrate () {
   await PaymentRequest.sync({force: true})
   await Event.sync({force: true})
@@ -182,23 +182,22 @@ function serializePayment (data) {
     fiat_total_amount: data.fiat_total_amount,
     fiat_currency: data.fiat_currency,
     requested_digital_amount: data.requested_digital_amount,
-    requested_digital_currency: data.requested_digital_currency
+    requested_digital_currency: data.requested_digital_currency,
   }
 }
 
 function payments (userId) {
   return PaymentRequest.findAll({
-    where: { user_id: userId,
-      payment_status: {
-        [Op.ne]: 'notsubmitted'
-      }
+    where: { user_id: userId, payment_status: {
+        [Op.ne]: "notsubmitted"
+      },
     },
     order: [
       ['createdAt', 'DESC']
     ]
-  }).then(function (data) {
+  }).then(function(data) {
     return data.map(function (request) {
-      return serializePayment(request.dataValues)
+      return serializePayment(request.dataValues);
     })
   })
 }
@@ -215,7 +214,7 @@ function requestCreate (userId, payment) {
       fiat_total_amount: payment.fiat_total_amount.amount,
       fiat_currency: payment.fiat_total_amount.currency,
       requested_digital_amount: payment.requested_digital_amount.amount,
-      requested_digital_currency: payment.requested_digital_amount.currency
+      requested_digital_currency: payment.requested_digital_amount.currency,
     }
   })
 }
@@ -281,21 +280,21 @@ function createSellRequest (request) {
 }
 
 async function events (userId, paymentId) {
-  const request = await PaymentRequest.findOne({
+  let request = await PaymentRequest.findOne({
     where: {
       user_id: userId,
       payment_id: paymentId
     }
   })
-  const payment = serializePayment(request)
+  let payment = serializePayment(request)
   return Event.findAll({
     where: {
       user_id: userId,
       payment_id: paymentId
     }
-  }).then(function (data) {
-    payment.events = data.map(function (event) {
-      const data = event.dataValues
+  }).then(function(data) {
+    payment.events = data.map(function(event) {
+      var data = event.dataValues
       return {
         id: data.id,
         name: data.name,
@@ -310,13 +309,13 @@ async function events (userId, paymentId) {
 }
 
 async function eventCreate (event) {
-  const request = await PaymentRequest.findById(event.payment.id)
+  let request = await PaymentRequest.findById(event.payment.id)
   if (!request) {
     requestCreate(event.payment.partner_end_user_id, {
       payment_id: event.payment.id,
       fiat_total_amount: {
         amount: event.payment.fiat_total_amount.amount,
-        currency: event.payment.fiat_total_amount.currency
+        currency: event.payment.fiat_total_amount.currency,
       },
       requested_digital_amount: {
         amount: null,
@@ -324,7 +323,7 @@ async function eventCreate (event) {
       }
     })
   }
-  const newEvent = await Event.findOrCreate({
+  let newEvent = await Event.findOrCreate({
     where: {
       id: event.event_id
     },

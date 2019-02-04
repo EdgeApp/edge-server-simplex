@@ -34,7 +34,7 @@ buy.getEvents()
     process.exit()
   })
 */
-sellApi.messages()
+sellApi.syncMessages()
   .then(async function(data) {
     console.log(JSON.stringify(data))
   })
