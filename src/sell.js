@@ -54,15 +54,17 @@ module.exports = function (sandbox, partnerId, apiKey) {
   }
 
   async function initiateSell (req, clientIp) {
+    const quoteId = req.body.quote_id
+    const accountId = req.body.account_id
     const data = {
       referer_url: REFERER_URL,
       return_url: req.body.return_url,
       txn_details: {
-        quote_id: req.body.quote_id,
+        quote_id: quoteId,
         refund_crypto_address: req.body.refund_crypto_address
       },
       account_details: {
-        account_id: req.body.account_id
+        account_id: accountId
       }
     }
     const options = {
@@ -74,7 +76,7 @@ module.exports = function (sandbox, partnerId, apiKey) {
     }
     console.log(options)
     const res = await rp(options)
-    await models.createTransaction(res)
+    await models.createSellRequest({...res, quoteId, accountId})
     return res
   }
 

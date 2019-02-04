@@ -1,43 +1,54 @@
 const Sequelize = require('sequelize')
-const uuidv4 = require('uuid/v4')
-
 const Op = Sequelize.Op
 
+const env = process.env.NODE_ENV || 'development'
+const config = require(__dirname + '/../config/config')[env]
+
 const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USERNAME,
-  process.env.DB_PASSWORD,
+  config.database,
+  config.username,
+  config.password,
   {
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
+    host: config.host,
+    port: config.port,
     dialect: 'postgres',
-    pool: {max: 5, min: 0, idle: 10000},
+    pool: { max: 5, min: 0, idle: 10000 },
     omitNull: true
   })
 
-const Transactions = sequelize.define('transactions', {
-  id: {
-    primaryKey: true,
-    type: Sequelize.UUID,
-    allowNull: false
-  },
-  external_id: {
+const SellRequest = sequelize.define('sell_requests', {
+  txn_id: {
     type: Sequelize.STRING,
     allowNull: false
   },
   txn_url: {
     type: Sequelize.STRING,
     allowNull: false
+  },
+  quote_id: {
+    type: Sequelize.STRING,
+    allowNull: false
+  },
+  account_id: {
+    type: Sequelize.STRING,
+    allowNull: false
   }
 })
 
-const SendCryptoRequests = sequelize.define('send_crypto_requests', {
-  id: {
-    primaryKey: true,
-    type: Sequelize.UUID,
+const SendCrypto = sequelize.define('send_cryptos', {
+  reason: {
+    type: Sequelize.STRING,
+    allowNull: true
+  },
+  txn_id: {
+    type: Sequelize.STRING,
     allowNull: false
   },
-  reason: {
+  user_id: {
+    type: Sequelize.STRING,
+    allowNull: false
+  },
+  account_id: {
     type: Sequelize.STRING,
     allowNull: true
   },
@@ -45,38 +56,39 @@ const SendCryptoRequests = sequelize.define('send_crypto_requests', {
     type: Sequelize.STRING,
     allowNull: true
   },
-  txn_id: {
+  crypto_currency: {
     type: Sequelize.STRING,
     allowNull: true
   },
-  user_id: {
-    type: Sequelize.STRING
-  },
-  account_id: {
-    type: Sequelize.STRING
-  },
-  crypto_currency: {
-    type: Sequelize.STRING
-  },
   crypto_amount: {
-    type: Sequelize.STRING
+    type: Sequelize.STRING,
+    allowNull: true
   },
   destination_crypto_address: {
-    type: Sequelize.STRING
+    type: Sequelize.STRING,
+    allowNull: true
+  },
+  sell_id: {
+    type: Sequelize.INTEGER,
+    allowNull: false
   },
   crypto_amount_sent: {
-    type: Sequelize.STRING
+    type: Sequelize.STRING,
+    allowNull: true
   },
   blockchain_txn_hash: {
-    type: Sequelize.STRING
+    type: Sequelize.STRING,
+    allowNull: true
   },
   sent_at: {
-    type: Sequelize.DATE
+    type: Sequelize.DATE,
+    allowNull: true
   },
   canceled_at: {
-    type: Sequelize.DATE
+    type: Sequelize.DATE,
+    allowNull: true
   }
-}, {underscored: true})
+})
 
 const PaymentRequest = sequelize.define('payment_requests', {
   payment_id: {
@@ -154,10 +166,10 @@ const Event = sequelize.define('events', {
 }, { timestamps: false })
 
 async function migrate () {
-  await SendCryptoRequests.sync({force: true})
   await PaymentRequest.sync({force: true})
   await Event.sync({force: true})
-  await Transactions.sync({force: true})
+  await SellRequest.sync({force: true})
+  await SendCrypto.sync({force: true})
 }
 
 function serializePayment (data) {
@@ -208,10 +220,15 @@ function requestCreate (userId, payment) {
   })
 }
 function sendCryptoRequest (requestId) {
-  return SendCryptoRequests.find({where: {
+  return SendCrypto.find({where: {
     id: requestId,
     sent_at: null,
     canceled_at: null
+  }})
+}
+function getSellByTxnId (txnId) {
+  return SellRequest.find({where: {
+    txn_id: txnId
   }})
 }
 
@@ -223,7 +240,7 @@ function updateSendCrypto (sendCryptoId, status, cryptoAmountSent, txnHash) {
   } else {
     canceledAt = new Date()
   }
-  return SendCryptoRequests.update(
+  return SendCrypto.update(
     {
       crypto_amount_sent: cryptoAmountSent,
       blockchain_txn_hash: txnHash,
@@ -236,9 +253,10 @@ function updateSendCrypto (sendCryptoId, status, cryptoAmountSent, txnHash) {
     })
 }
 
-function createSendCryptoRequest (request) {
-  return SendCryptoRequests.create({
-    id: uuidv4(),
+async function createSendCryptoRequest (request) {
+  const sellRequest = await getSellByTxnId(request.txn_id)
+  return SendCrypto.create({
+    sell_id: sellRequest.id,
     reason: request.reason,
     txn_id: request.txn_id,
     user_id: request.user_id,
@@ -250,13 +268,12 @@ function createSendCryptoRequest (request) {
   })
 }
 
-function createTransaction (request) {
-  return Transactions.create({
-    id: uuidv4(),
-    external_id: request.txn_id,
+function createSellRequest (request) {
+  return SellRequest.create({
+    txn_id: request.txn_id,
     txn_url: request.txn_url,
-    crypto_amount_sent: null,
-    blockchain_txn_hash: null,
+    quote_id: request.quoteId,
+    account_id: request.accountId,
     send_request_at: null,
     sent_at: null,
     refund_at: null
@@ -336,7 +353,7 @@ module.exports = {
   requestCreate,
   migrate,
   createSendCryptoRequest,
-  createTransaction,
+  createSellRequest,
   sendCryptoRequest,
   updateSendCrypto
 }

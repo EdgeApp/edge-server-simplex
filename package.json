@@ -5,6 +5,7 @@
   "main": "src/index.js",
   "license": "MIT",
   "scripts": {
+    "migrate": "node $NODE_DEBUG_OPTION src/migrate.js",
     "start": "node src/index.js",
     "dev": "nodemon $NODE_DEBUG_OPTION --watch src ./src/index"
   },

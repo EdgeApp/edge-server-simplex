@@ -33,9 +33,9 @@ ajv.addSchema(messageResponse, 'message-response')
 ajv.addSchema(initiateSell, 'initiate-sell')
 
 const clientIp = (req) => {
-  return process.env.IP_ADDRESS_OVERRIDE ||
-    req.headers['x-forwarded-for'] ||
-    req.connection.remoteAddress
+  return process.env.IP_ADDRESS_OVERRIDE
+    || req.headers['x-forwarded-for']
+    || req.connection.remoteAddress
 }
 
 const authenticateSimplex = (req, res, next) => {
@@ -96,35 +96,6 @@ app.post('/partner/data', async function (req, res) {
   }
 })
 
-app.post('/send-crypto', authenticateSimplex, async function (req, res) {
-  const request = req.body
-  const sendCryptoRequest = await models.createSendCryptoRequest(request)
-  await sellApi.notifyUser(request.txn_id, sendCryptoRequest.id)
-  res.json({
-    'execution_order': {
-      'id': sendCryptoRequest.id,
-      'status': 'pending'
-    }
-  })
-})
-
-app.post('/send-crypto-completed', async function (req, res) {
-  const {sendCryptoId, status, cryptoAmountSent, txnHash} = req.body
-  await models.updateSendCrypto(sendCryptoId, status, cryptoAmountSent, txnHash)
-  await sellApi.notifySendCryptoStatus({sendCryptoId, status, cryptoAmountSent, txnHash})
-  res.send()
-})
-
-app.get('/sendCryptoRequests/', async function (req, res) {
-  try {
-    const response = await models.sendCryptoRequest(req.query.sendCryptoId)
-    res.json({res: response, err: null})
-  } catch (e) {
-    console.log(e.message)
-    res.status(403).json({res: null, err: e.message})
-  }
-})
-
 app.get('/payments/:userId/', async function (req, res) {
   try {
     const response = await models.payments(req.params.userId)
@@ -163,6 +134,34 @@ function wrap (method, path, validator, cb) {
   })
 }
 
+app.post('/send-crypto', authenticateSimplex, async function (req, res) {
+  const request = req.body
+  const sendCryptoRequest = await models.createSendCryptoRequest(request)
+  await sellApi.notifyUser(request.txn_id, sendCryptoRequest.id)
+  res.json({
+    'execution_order': {
+      'id': sendCryptoRequest.id,
+      'status': 'pending'
+    }
+  })
+})
+
+app.post('/send-crypto-completed', async function (req, res) {
+  const {sendCryptoId, status, cryptoAmountSent, txnHash} = req.body
+  await models.updateSendCrypto(sendCryptoId, status, cryptoAmountSent, txnHash)
+  await sellApi.notifySendCryptoStatus({sendCryptoId, status, cryptoAmountSent, txnHash})
+  res.send()
+})
+
+app.get('/sendCryptoRequests/', async function (req, res) {
+  try {
+    const response = await models.sendCryptoRequest(req.query.sendCryptoId)
+    res.json({res: response, err: null})
+  } catch (e) {
+    console.log(e.message)
+    res.status(403).json({res: null, err: e.message})
+  }
+})
 wrap('get', '/sell/quote/', null, sellApi.getQuote)
 // TODO define a schema validator
 wrap('post', '/sell/initiate/', 'initiate-sell', sellApi.initiateSell)
