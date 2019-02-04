@@ -139,9 +139,9 @@ app.post('/send-crypto', authenticateSimplex, async function (req, res) {
   const sendCryptoRequest = await models.createSendCryptoRequest(request)
   await sellApi.notifyUser(request.txn_id, sendCryptoRequest.id)
   res.json({
-    'execution_order': {
-      'id': sendCryptoRequest.id,
-      'status': 'pending'
+    execution_order: {
+      id: sendCryptoRequest.id,
+      status: 'pending'
     }
   })
 })
@@ -166,8 +166,8 @@ wrap('get', '/sell/quote/', null, sellApi.getQuote)
 // TODO define a schema validator
 wrap('post', '/sell/initiate/', 'initiate-sell', sellApi.initiateSell)
 
-wrap('get', '/sell/message/:user_id/', null, sellApi.userQueue)
-wrap('post', '/sell/message/:user_id/:msg_id/ack', null, sellApi.messageAck)
-wrap('post', '/sell/message/:user_id/:msg_id/response', 'message-response', sellApi.messageResponse)
+// wrap('get', '/sell/message/:user_id/', null, sellApi.userQueue)
+// wrap('post', '/sell/message/:user_id/:msg_id/ack', null, sellApi.messageAck)
+// wrap('post', '/sell/message/:user_id/:msg_id/response', 'message-response', sellApi.messageResponse)
 
 app.listen(process.env.PORT)
