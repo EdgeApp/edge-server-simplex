@@ -1,15 +1,18 @@
 const Sequelize = require('sequelize')
 const Op = Sequelize.Op;
 
+const env = process.env.NODE_ENV || 'development'
+const config = require(__dirname + '/../config/config')[env]
+
 const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USERNAME,
-  process.env.DB_PASSWORD,
+  config.database,
+  config.username,
+  config.password,
   {
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
+    host: config.host,
+    port: config.port,
     dialect: 'postgres',
-    pool: {max: 5, min: 0, idle: 10000},
+    pool: { max: 5, min: 0, idle: 10000 },
     omitNull: true,
   })
 
@@ -88,6 +91,64 @@ const Event = sequelize.define('events', {
     allowNull: true,
   }
 }, { timestamps: false })
+
+const SellRequest = sequelize.define('sell_requests', {
+  txn_id: {
+    type: Sequelize.STRING,
+    allowNull: true,
+  },
+  txn_url: {
+    type: Sequelize.STRING,
+    allowNull: true,
+  },
+  quote_id: {
+    type: Sequelize.STRING,
+    allowNull: false,
+  },
+  account_id: {
+    type: Sequelize.STRING,
+    allowNull: false,
+  }
+})
+
+const SendCrypto = sequelize.define('send_cryptos', {
+  reason:{
+    type: Sequelize.STRING,
+    allowNull: true,
+  },
+  txn_id: {
+    type: Sequelize.STRING,
+    allowNull: false,
+  },
+  user_id: {
+    type: Sequelize.STRING,
+    allowNull: false,
+  },
+  account_id: {
+    type: Sequelize.STRING,
+    allowNull: true,
+  },
+  quote_id: {
+    type: Sequelize.STRING,
+    allowNull: true,
+  },
+  crypto_currency: {
+    type: Sequelize.STRING,
+    allowNull: true,
+  },
+  crypto_amount: {
+    type: Sequelize.STRING,
+    allowNull: true,
+  },
+  destination_crypto_address: {
+    type: Sequelize.STRING,
+    allowNull: true,
+  },
+  sell_id: {
+    type: Sequelize.INTEGER,
+    allowNull: false
+  },
+})
 
 async function migrate () {
   await PaymentRequest.sync({force: true})
@@ -207,4 +268,8 @@ async function eventCreate (event) {
   return newEvent
 }
 
-module.exports = { events, eventCreate, payments, requestCreate, migrate }
+module.exports = {
+  events, eventCreate, payments,
+  requestCreate, migrate,
+  SellRequest, SendCrypto
+}
