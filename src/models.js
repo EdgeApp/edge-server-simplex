@@ -1,5 +1,6 @@
 const Sequelize = require('sequelize')
 const Op = Sequelize.Op
+const uuid = require('uuid/v4')
 
 const env = process.env.NODE_ENV || 'development'
 const config = require(__dirname + '/../config/config')[env]
@@ -93,6 +94,11 @@ const Event = sequelize.define('events', {
 }, { timestamps: false })
 
 const SellRequest = sequelize.define('sell_requests', {
+  id: {
+    type: Sequelize.STRING,
+    primaryKey: true,
+    allowNull: false
+  },
   txn_id: {
     type: Sequelize.STRING,
     allowNull: false
@@ -112,6 +118,11 @@ const SellRequest = sequelize.define('sell_requests', {
 })
 
 const SendCrypto = sequelize.define('send_cryptos', {
+  id: {
+    type: Sequelize.STRING,
+    primaryKey: true,
+    allowNull: false
+  },
   reason: {
     type: Sequelize.STRING,
     allowNull: true
@@ -219,12 +230,7 @@ function requestCreate (userId, payment) {
   })
 }
 function sendCryptoRequest (params) {
-  return SendCrypto.find({where: {
-    id: params.id,
-    account_id: params.account_id,
-    sent_at: null,
-    canceled_at: null
-  }})
+  return SendCrypto.findAll({where: params, order: [['sent_at', 'DESC']]})
 }
 function getSellByTxnId (txnId) {
   return SellRequest.find({where: {
@@ -256,6 +262,7 @@ function updateSendCrypto (sendCryptoId, status, cryptoAmountSent, txnHash) {
 async function createSendCryptoRequest (request) {
   const sellRequest = await getSellByTxnId(request.txn_id)
   return SendCrypto.create({
+    id: uuid(),
     sell_id: sellRequest.id,
     reason: request.reason,
     txn_id: request.txn_id,
@@ -270,6 +277,7 @@ async function createSendCryptoRequest (request) {
 
 function createSellRequest (request) {
   return SellRequest.create({
+    id: uuid(),
     txn_id: request.txn_id,
     txn_url: request.txn_url,
     quote_id: request.quoteId,

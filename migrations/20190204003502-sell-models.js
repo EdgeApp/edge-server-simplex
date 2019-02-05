@@ -6,7 +6,7 @@ module.exports = {
       await queryInterface.createTable('sell_requests', {
         id: {
           primaryKey: true,
-          type: Sequelize.UUIDV4,
+          type: Sequelize.STRING,
         },
         txn_id: {
           type: Sequelize.STRING,
@@ -36,7 +36,7 @@ module.exports = {
       await queryInterface.createTable('send_cryptos', {
         id: {
           primaryKey: true,
-          type: Sequelize.UUIDV4,
+          type: Sequelize.STRING,
         },
         reason:{
           type: Sequelize.STRING,

@@ -33,9 +33,9 @@ ajv.addSchema(messageResponse, 'message-response')
 ajv.addSchema(initiateSell, 'initiate-sell')
 
 const clientIp = (req) => {
-  return process.env.IP_ADDRESS_OVERRIDE
-    || req.headers['x-forwarded-for']
-    || req.connection.remoteAddress
+  return process.env.IP_ADDRESS_OVERRIDE ||
+    req.headers['x-forwarded-for'] ||
+    req.connection.remoteAddress
 }
 
 const authenticateSimplex = (req, res, next) => {
@@ -153,10 +153,13 @@ app.post('/send-crypto-completed', async function (req, res) {
   res.send()
 })
 
-app.get('/sendCryptoRequests/:sendCryptoId', async function (req, res) {
+app.get('/sendCryptoRequests', async function (req, res) {
   try {
+    const id = req.query.sendCryptoId
     const params = {}
-    params.id = req.params.sendCryptoId
+    if (id) {
+      params.id = id
+    }
     params.account_id = req.query.accountId
     const response = await models.sendCryptoRequest(params)
     res.json({res: response, err: null})
