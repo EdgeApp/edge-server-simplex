@@ -2,35 +2,31 @@ const Sequelize = require('sequelize')
 const Op = Sequelize.Op
 const uuid = require('uuid/v4')
 
-const env = process.env.NODE_ENV || 'development'
-const config = require(__dirname + '/../config/config')[env]
-
 const sequelize = new Sequelize(
-  config.database,
-  config.username,
-  config.password,
+  process.env.DB_NAME,
+  process.env.DB_USERNAME,
+  process.env.DB_PASSWORD,
   {
-    host: config.host,
-    port: config.port,
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
     dialect: 'postgres',
     pool: { max: 5, min: 0, idle: 10000 },
-    omitNull: true,
+    omitNull: true
   })
-
 
 const PaymentRequest = sequelize.define('payment_requests', {
   payment_id: {
     primaryKey: true,
     type: Sequelize.STRING,
-    allowNull: false,
+    allowNull: false
   },
   quote_id: {
     type: Sequelize.STRING,
-    allowNull: true,
+    allowNull: true
   },
   order_id: {
     type: Sequelize.STRING,
-    allowNull: true,
+    allowNull: true
   },
   fiat_total_amount: {
     type: Sequelize.STRING
@@ -54,19 +50,19 @@ const PaymentRequest = sequelize.define('payment_requests', {
   }
 })
 
-const Event = sequelize.define('events', {
+const PaymentEvent = sequelize.define('payments_events', {
   id: {
     primaryKey: true,
     type: Sequelize.STRING,
-    allowNull: false,
+    allowNull: false
   },
   name: {
     type: Sequelize.STRING,
-    allowNull: false,
+    allowNull: false
   },
   payment_status: {
     type: Sequelize.STRING,
-    allowNull: true,
+    allowNull: true
   },
   payment_created_at: {
     type: Sequelize.DATE
@@ -86,16 +82,16 @@ const Event = sequelize.define('events', {
   payment_id: {
     references: {
       model: PaymentRequest,
-      key: 'payment_id',
+      key: 'payment_id'
     },
     type: Sequelize.STRING,
-    allowNull: true,
+    allowNull: true
   }
 }, { timestamps: false })
 
 const SellRequest = sequelize.define('sell_requests', {
   id: {
-    type: Sequelize.STRING,
+    type: Sequelize.UUID,
     primaryKey: true,
     allowNull: false
   },
@@ -107,19 +103,59 @@ const SellRequest = sequelize.define('sell_requests', {
     type: Sequelize.STRING,
     allowNull: false
   },
+  crypto_amount: {
+    type: Sequelize.STRING,
+    allowNull: false
+  },
+  crypto_currency: {
+    type: Sequelize.STRING,
+    allowNull: false
+  },
+  fiat_amount: {
+    type: Sequelize.STRING,
+    allowNull: false
+  },
+  fiat_currency: {
+    type: Sequelize.STRING,
+    allowNull: false
+  },
+  status: {
+    type: Sequelize.STRING,
+    allowNull: true
+  },
   quote_id: {
     type: Sequelize.STRING,
     allowNull: false
   },
-  account_id: {
+  user_id: {
     type: Sequelize.STRING,
     allowNull: false
   }
 })
 
-const SendCrypto = sequelize.define('send_cryptos', {
+const SellEvent = sequelize.define('sell_events', {
   id: {
+    primaryKey: true,
     type: Sequelize.STRING,
+    allowNull: false
+  },
+  sell_status: {
+    type: Sequelize.STRING,
+    allowNull: false
+  },
+  sell_id: {
+    references: {
+      model: SellRequest,
+      key: 'id'
+    },
+    type: Sequelize.UUID,
+    allowNull: true
+  }
+})
+
+const ExecutionOrder = sequelize.define('execution_orders', {
+  id: {
+    type: Sequelize.UUID,
     primaryKey: true,
     allowNull: false
   },
@@ -127,15 +163,11 @@ const SendCrypto = sequelize.define('send_cryptos', {
     type: Sequelize.STRING,
     allowNull: true
   },
-  txn_id: {
+  simplex_user_id: {
     type: Sequelize.STRING,
     allowNull: false
   },
   user_id: {
-    type: Sequelize.STRING,
-    allowNull: false
-  },
-  account_id: {
     type: Sequelize.STRING,
     allowNull: true
   },
@@ -156,7 +188,7 @@ const SendCrypto = sequelize.define('send_cryptos', {
     allowNull: true
   },
   sell_id: {
-    type: Sequelize.INTEGER,
+    type: Sequelize.UUID,
     allowNull: false
   },
   crypto_amount_sent: {
@@ -171,16 +203,21 @@ const SendCrypto = sequelize.define('send_cryptos', {
     type: Sequelize.DATE,
     allowNull: true
   },
-  canceled_at: {
+  cancelled_at: {
+    type: Sequelize.DATE,
+    allowNull: true
+  },
+  failed_at: {
     type: Sequelize.DATE,
     allowNull: true
   }
 })
 async function migrate () {
   await PaymentRequest.sync({force: true})
-  await Event.sync({force: true})
+  await PaymentEvent.sync({force: true})
   await SellRequest.sync({force: true})
-  await SendCrypto.sync({force: true})
+  await SellEvent.sync({force: true})
+  await ExecutionOrder.sync({force: true})
 }
 
 function serializePayment (data) {
@@ -193,22 +230,78 @@ function serializePayment (data) {
     fiat_total_amount: data.fiat_total_amount,
     fiat_currency: data.fiat_currency,
     requested_digital_amount: data.requested_digital_amount,
-    requested_digital_currency: data.requested_digital_currency,
+    requested_digital_currency: data.requested_digital_currency
+  }
+}
+function serializeSell (data) {
+  return {
+    created_at: data.createdAt,
+    status: data.status,
+    url: data.txn_url,
+    id: data.id,
+    quote_id: data.quote_id,
+    fiat_total_amount: data.fiat_amount,
+    fiat_currency: data.fiat_currency,
+    requested_digital_amount: data.crypto_amount,
+    requested_digital_currency: data.crypto_currency
+  }
+}
+
+function getExecutionOrderStatus (executionOrder) {
+  if (executionOrder.failed_at) {
+    return 'failed'
+  }
+  if (executionOrder.cancelled_at) {
+    return 'cancelled'
+  }
+  if (executionOrder.sent_at) {
+    return 'completed'
+  }
+  return 'pending'
+}
+function serializeExecutionOrder (executionOrder) {
+  return {
+    id: executionOrder.id,
+    sell_id: executionOrder.sell_id,
+    created_at: executionOrder.createdAt,
+    sent_at: executionOrder.sent_at,
+    cancelled_at: executionOrder.cancelled_at,
+    status: getExecutionOrderStatus(executionOrder),
+    failed_at: executionOrder.failed_at,
+    destination_crypto_address: executionOrder.destination_crypto_address,
+    fiat_total_amount: executionOrder.fiat_amount,
+    fiat_currency: executionOrder.fiat_currency,
+    requested_digital_amount: executionOrder.crypto_amount,
+    requested_digital_currency: executionOrder.crypto_currency
   }
 }
 
 function payments (userId) {
   return PaymentRequest.findAll({
-    where: { user_id: userId, payment_status: {
-        [Op.ne]: "notsubmitted"
-      },
+    where: {
+      user_id: userId,
+      payment_status: {
+        [Op.ne]: 'notsubmitted'
+      }
     },
     order: [
       ['createdAt', 'DESC']
     ]
-  }).then(function(data) {
+  }).then(function (data) {
     return data.map(function (request) {
-      return serializePayment(request.dataValues);
+      return serializePayment(request.dataValues)
+    })
+  })
+}
+function sells (userId) {
+  return SellRequest.findAll({
+    where: { user_id: userId },
+    order: [
+      ['createdAt', 'DESC']
+    ]
+  }).then(function (data) {
+    return data.map(function (request) {
+      return serializeSell(request.dataValues)
     })
   })
 }
@@ -225,53 +318,77 @@ function requestCreate (userId, payment) {
       fiat_total_amount: payment.fiat_total_amount.amount,
       fiat_currency: payment.fiat_total_amount.currency,
       requested_digital_amount: payment.requested_digital_amount.amount,
-      requested_digital_currency: payment.requested_digital_amount.currency,
+      requested_digital_currency: payment.requested_digital_amount.currency
     }
   })
 }
-function sendCryptoRequest (params) {
-  return SendCrypto.findAll({where: params, order: [['sent_at', 'DESC']]})
-}
-function getSellByTxnId (txnId) {
-  return SellRequest.find({where: {
-    txn_id: txnId
-  }})
+function executionOrder (params) {
+  return ExecutionOrder.findOne({where: params}).then(function (data) {
+    return serializeExecutionOrder(data.dataValues)
+  })
 }
 
-function updateSendCrypto (sendCryptoId, status, cryptoAmountSent, txnHash) {
-  let sendAt = null
-  let canceledAt = null
-  if (status === 'completed') {
-    sendAt = new Date()
-  } else {
-    canceledAt = new Date()
+function executionOrders (params, options = {}) {
+  if (options.onlyPending) {
+    params.sent_at = null
+    params.cancelled_at = null
+    params.failed_at = null
   }
-  return SendCrypto.update(
+  return ExecutionOrder.findAll({
+    where: params,
+    order: [['createdAt', 'DESC']]
+  }).then(function (data) {
+    return data.map(function (request) {
+      return serializeExecutionOrder(request.dataValues)
+    })
+  })
+}
+
+async function sellRequest (params) {
+  const request = await SellRequest.findOne({where: params})
+  return serializeSell(request)
+}
+
+function updateExecutionOrder (executionOrderId, status, cryptoAmountSent, txnHash) {
+  const now = new Date()
+  let sendAt = null
+  let cancelledAt = null
+  let failedAt = null
+  if (status === 'completed') {
+    sendAt = now
+  } else if (status === 'failed') {
+    failedAt = now
+  } else if (status === 'cancelled') {
+    cancelledAt = now
+  }
+  return ExecutionOrder.update(
     {
       crypto_amount_sent: cryptoAmountSent,
       blockchain_txn_hash: txnHash,
       sent_at: sendAt,
-      canceled_at: canceledAt
+      cancelled_at: cancelledAt,
+      failed_at: failedAt
     }, {
       where: {
-        id: sendCryptoId
+        id: executionOrderId
       }
     })
 }
+function updateSellRequest (id, params) {
+  return SellRequest.update(params, {where: {id}})
+}
 
-async function createSendCryptoRequest (request) {
-  const sellRequest = await getSellByTxnId(request.txn_id)
-  return SendCrypto.create({
+async function createExecutionOrder (data) {
+  return ExecutionOrder.create({
     id: uuid(),
-    sell_id: sellRequest.id,
-    reason: request.reason,
-    txn_id: request.txn_id,
-    user_id: request.user_id,
-    quote_id: request.quote_id,
-    account_id: request.account_id,
-    crypto_currency: request.crypto_currency,
-    crypto_amount: request.crypto_amount,
-    destination_crypto_address: request.destination_crypto_address
+    sell_id: data.sell_id,
+    reason: data.reason,
+    simplex_user_id: data.user_id,
+    quote_id: data.quote_id,
+    user_id: data.account_id,
+    crypto_currency: data.crypto_currency,
+    crypto_amount: data.crypto_amount,
+    destination_crypto_address: data.destination_crypto_address
   })
 }
 
@@ -280,35 +397,48 @@ function createSellRequest (request) {
     id: uuid(),
     txn_id: request.txn_id,
     txn_url: request.txn_url,
-    quote_id: request.quoteId,
-    account_id: request.accountId,
+    crypto_amount: request.crypto_amount,
+    crypto_currency: request.crypto_currency,
+    fiat_amount: request.fiat_amount,
+    fiat_currency: request.fiat_currency,
+    quote_id: request.quote_id,
+    user_id: request.userId,
     send_request_at: null,
     sent_at: null,
-    refund_at: null
+    status: 'submitted'
   })
 }
 
-async function events (userId, paymentId) {
-  let request = await PaymentRequest.findOne({
+async function createSellEvent (sellId, status) {
+  await SellEvent.create({
+    id: uuid(),
+    sell_id: sellId,
+    sell_status: status
+  })
+  await updateSellRequest(sellId, {status})
+}
+
+async function paymentEvents (userId, paymentId) {
+  const request = await PaymentRequest.findOne({
     where: {
       user_id: userId,
       payment_id: paymentId
     }
   })
-  let payment = serializePayment(request)
-  return Event.findAll({
+  const payment = serializePayment(request)
+  return PaymentEvent.findAll({
     where: {
       user_id: userId,
       payment_id: paymentId
     }
-  }).then(function(data) {
-    payment.events = data.map(function(event) {
-      var data = event.dataValues
+  }).then(function (data) {
+    payment.events = data.map(function (event) {
+      const data = event.dataValues
       return {
         id: data.id,
         name: data.name,
         payment_id: data.payment_id,
-        payment_status: data.payment_status,
+        status: data.payment_status,
         created_at: data.payment_created_at,
         updated_at: data.payment_updated_at
       }
@@ -317,14 +447,40 @@ async function events (userId, paymentId) {
   })
 }
 
+async function sellEvents (userId, sellId) {
+  const request = await SellRequest.findOne({
+    where: {
+      user_id: userId,
+      id: sellId
+    }
+  })
+  const sell = serializeSell(request)
+  return SellEvent.findAll({
+    where: {
+      sell_id: sellId
+    }
+  }).then(function (data) {
+    sell.events = data.map(function (event) {
+      return {
+        id: event.id,
+        name: event.name,
+        sell_id: event.sell_id,
+        status: event.sell_status,
+        created_at: event.createdAt
+      }
+    })
+    return sell
+  })
+}
+
 async function eventCreate (event) {
-  let request = await PaymentRequest.findById(event.payment.id)
+  const request = await PaymentRequest.findById(event.payment.id)
   if (!request) {
     requestCreate(event.payment.partner_end_user_id, {
       payment_id: event.payment.id,
       fiat_total_amount: {
         amount: event.payment.fiat_total_amount.amount,
-        currency: event.payment.fiat_total_amount.currency,
+        currency: event.payment.fiat_total_amount.currency
       },
       requested_digital_amount: {
         amount: null,
@@ -332,7 +488,7 @@ async function eventCreate (event) {
       }
     })
   }
-  let newEvent = await Event.findOrCreate({
+  const newEvent = await PaymentEvent.findOrCreate({
     where: {
       id: event.event_id
     },
@@ -355,13 +511,18 @@ async function eventCreate (event) {
 }
 
 module.exports = {
-  events,
+  paymentEvents,
+  sellEvents,
   eventCreate,
   payments,
+  sells,
   requestCreate,
   migrate,
-  createSendCryptoRequest,
+  createExecutionOrder,
+  createSellEvent,
   createSellRequest,
-  sendCryptoRequest,
-  updateSendCrypto
+  executionOrder,
+  executionOrders,
+  sellRequest,
+  updateExecutionOrder
 }

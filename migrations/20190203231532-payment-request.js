@@ -40,7 +40,7 @@ module.exports = {
           type: Sequelize.STRING
         }
       }),
-      await queryInterface.createTable('events', {
+      await queryInterface.createTable('payments_events', {
         id: {
           primaryKey: true,
           type: Sequelize.STRING,
@@ -83,7 +83,7 @@ module.exports = {
 
   down: async (queryInterface, Sequelize) => {
     return [
-      await queryInterface.dropTable('events'),
+      await queryInterface.dropTable('payments_events'),
       await queryInterface.dropTable('payment_requests')
     ]
   }

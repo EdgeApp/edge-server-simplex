@@ -1,27 +1,24 @@
 {
-  "title": "message-response",
+  "title": "execution-order-notify-status",
   "description": "",
   "type": "object",
   "properties": {
     "id": {
       "type": "string",
-      "description": "an opaque string to identify this execute order"
-    },
-    "execution_order_id": {
-      "type": "string",
-      "description": "an opaque string to identify this execute order"
+      "description": "an opaque string to identify this execution order"
     },
     "status": {
-      "type": "string",
+      "enum": [
+        "completed", "failed", "cancelled"
+      ],
       "description": "the status, either pending, failed or completed"
     },
-    "crypto_amount_sent": {
+    "cryptoAmountSent": {
       "type": "string",
       "description": "the amount of crypto sent"
     },
-    "blockchain_txn_hash": {
-      "type": "number",
-      "exclusiveMinimum": 0,
+    "txnHash": {
+      "type": "string",
       "description": "blockchain transaction hash"
     }
   },

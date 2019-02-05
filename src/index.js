@@ -7,13 +7,13 @@ const bodyParser = require('body-parser')
 const models = require('./models')
 const buyApi = require('./buy')(
   process.env.SIMPLEX_SANDBOX === 'true',
-  process.env.SIMPLEX_PARTNER_ID,
-  process.env.SIMPLEX_API_KEY)
+  process.env.SIMPLEX_BUY_PARTNER_ID,
+  process.env.SIMPLEX_BUY_API_KEY)
 const sellApi = require('./sell')(
   process.env.SIMPLEX_SANDBOX === 'true',
-  process.env.SIMPLEX_PARTNER_ID,
   process.env.SIMPLEX_SELL_API_KEY)
 const Ajv = require('ajv')
+const simplexRouter = require('./simplex-router')
 
 // Added request header to logging
 morgan.token('x-forwarded-for', function (req, res) {
@@ -25,12 +25,12 @@ const logFormat = ':x-forwarded-for [:date[clf]] ":method :url HTTP/:http-versio
 const ajv = new Ajv()
 const quoteSchema = require('./schemas/quote.json')
 const partnerDataSchema = require('./schemas/partner-data.json')
-const initiateSell = require('./schemas/initiate-sell.json')
-const messageResponse = require('./schemas/message-response.json')
+const initiateSellSchema = require('./schemas/initiate-sell.json')
+const executionOrderNotifyStatusSchema = require('./schemas/execution-order-notify-status.json')
 ajv.addSchema(quoteSchema, 'quote')
 ajv.addSchema(partnerDataSchema, 'partner-data')
-ajv.addSchema(messageResponse, 'message-response')
-ajv.addSchema(initiateSell, 'initiate-sell')
+ajv.addSchema(initiateSellSchema, 'initiate-sell')
+ajv.addSchema(executionOrderNotifyStatusSchema, 'execution-order-notify-status')
 
 const clientIp = (req) => {
   return process.env.IP_ADDRESS_OVERRIDE ||
@@ -38,13 +38,6 @@ const clientIp = (req) => {
     req.connection.remoteAddress
 }
 
-const authenticateSimplex = (req, res, next) => {
-  if (req.query._apikey === process.env.EDGE_API_KEY) {
-    next()
-  } else {
-    return res.status(401).json({res: null, err: 'unauthorized'})
-  }
-}
 const app = express()
 app.use(cors())
 app.use(morgan(logFormat))
@@ -58,10 +51,13 @@ app.use((req, res, next) => {
 app.get('/redirect', function (req, res) {
   res.redirect('edge-ret://plugins/simplex')
 })
+app.get('/redirect-to', function (req, res) {
+  res.redirect(req.query.to)
+})
 
 app.post('/quote', async function (req, res) {
   if (!ajv.validate('quote', req.body)) {
-    return res.status(403).json({res: null, err: ajv.errors})
+    return res.status(404).json({res: null, err: ajv.errors})
   }
   try {
     const response = await buyApi.getQuote(
@@ -75,13 +71,13 @@ app.post('/quote', async function (req, res) {
     res.json({res: response, err: null})
   } catch (e) {
     console.log(e.message)
-    res.status(403).json({res: null, err: e.message})
+    res.status(500).json({res: null, err: e.message})
   }
 })
 
 app.post('/partner/data', async function (req, res) {
   if (!ajv.validate('partner-data', req.body)) {
-    return res.status(403).json({res: null, err: ajv.errors})
+    return res.status(404).json({res: null, err: ajv.errors})
   }
   try {
     const response = await buyApi.getPartnerData(
@@ -92,7 +88,7 @@ app.post('/partner/data', async function (req, res) {
     res.json({res: response, err: null})
   } catch (e) {
     console.log(e.message)
-    res.status(403).json({res: null, err: e.message})
+    res.status(500).json({res: null, err: e.message})
   }
 })
 
@@ -102,78 +98,113 @@ app.get('/payments/:userId/', async function (req, res) {
     res.json({res: response, err: null})
   } catch (e) {
     console.log(e.message)
-    res.status(403).json({res: null, err: e.message})
+    res.status(500).json({res: null, err: e.message})
+  }
+})
+app.get('/sells/:userId/', async function (req, res) {
+  try {
+    const response = await models.sells(req.params.userId)
+    res.json({res: response, err: null})
+  } catch (e) {
+    console.log(e.message)
+    res.status(500).json({res: null, err: e.message})
+  }
+})
+app.get('/sells/:userId/:sellId', async function (req, res) {
+  try {
+    const response = await models.sellEvents(req.params.userId, req.params.sellId)
+    res.json({res: response, err: null})
+  } catch (e) {
+    console.log(e.message)
+    res.status(500).json({res: null, err: e.message})
   }
 })
 
 app.get('/payments/:userId/:paymentId/', async function (req, res) {
   try {
-    const response = await models.events(req.params.userId, req.params.paymentId)
+    const response = await models.paymentEvents(req.params.userId, req.params.paymentId)
     res.json({res: response, err: null})
   } catch (e) {
     console.log(e.message)
-    res.status(403).json({res: null, err: e.message})
+    res.status(500).json({res: null, err: e.message})
   }
 })
 
-function wrap (method, path, validator, cb) {
-  app[method](path, async function (req, res) {
-    if (validator && !ajv.validate(validator, req.body)) {
-      return res.status(403).json({res: null, err: ajv.errors})
-    }
-    try {
-      const response = await cb(req, clientIp(req))
-      console.log(response)
-      res.json({res: response, err: null})
-    } catch (e) {
-      console.log(e.message)
-      res.status(403).json({
-        res: null, err: e.message
-      })
-    }
+app.post('/execution-order-notify-status', async function (req, res) {
+  if (!ajv.validate('execution-order-notify-status', req.body)) {
+    return res.status(404).json({res: null, err: ajv.errors})
+  }
+  const EXECUTION_ORDER_STATUS_MAPPING = ({
+    failed: 'failed',
+    cancelled: 'cancelled',
+    completed: 'sent'
   })
-}
+  const {id, sellId, status, cryptoAmountSent, txnHash} = req.body
+  await models.updateExecutionOrder(id, status, cryptoAmountSent, txnHash)
+  await models.createSellEvent(sellId, EXECUTION_ORDER_STATUS_MAPPING[status])
 
-app.post('/send-crypto', authenticateSimplex, async function (req, res) {
-  const request = req.body
-  const sendCryptoRequest = await models.createSendCryptoRequest(request)
-  await sellApi.notifyUser(request.txn_id, sendCryptoRequest.id)
-  res.json({
-    execution_order: {
-      id: sendCryptoRequest.id,
-      status: 'pending'
-    }
-  })
-})
-
-app.post('/send-crypto-completed', async function (req, res) {
-  const {sendCryptoId, status, cryptoAmountSent, txnHash} = req.body
-  await models.updateSendCrypto(sendCryptoId, status, cryptoAmountSent, txnHash)
-  await sellApi.notifySendCryptoStatus({sendCryptoId, status, cryptoAmountSent, txnHash})
+  if (['failed', 'completed'].includes(status)) {
+    await sellApi.notifyExecutionOrderStatus({id, status, cryptoAmountSent, txnHash})
+  }
   res.send()
 })
 
-app.get('/sendCryptoRequests', async function (req, res) {
+app.post('/sell/initiate/', async function (req, res) {
+  if (!ajv.validate('initiate-sell', req.body)) {
+    return res.status(404).json({res: null, err: ajv.errors})
+  }
   try {
-    const id = req.query.sendCryptoId
-    const params = {}
-    if (id) {
-      params.id = id
+    const quote = req.body.quote
+    const userId = req.body.user_id
+    const transaction = await sellApi.initiateSell(req.body)
+    if (transaction._error) {
+      throw new Error(transaction._error)
     }
-    params.account_id = req.query.accountId
-    const response = await models.sendCryptoRequest(params)
+    const sellRequest = await models.createSellRequest({...transaction, ...quote, userId})
+    await models.createSellEvent(sellRequest.id, 'submitted')
+    res.json({res: transaction, err: null})
+  } catch (e) {
+    console.error(e.message)
+    res.status(500).json({res: null, err: e.message})
+  }
+})
+
+app.get('/execution-orders/:executionOrderId', async function (req, res) {
+  try {
+    const params = {}
+    params.id = req.params.executionOrderId
+    params.user_id = req.query.userId
+    const response = await models.executionOrders(params)
+    res.json({res: response[0], err: null})
+  } catch (e) {
+    console.log(e.message)
+    res.status(500).json({res: null, err: e.message})
+  }
+})
+
+app.get('/execution-orders/', async function (req, res) {
+  try {
+    const params = {}
+    params.user_id = req.query.userId
+    const onlyPending = req.query.onlyPending
+    const response = await models.executionOrders(params, {onlyPending})
     res.json({res: response, err: null})
   } catch (e) {
     console.log(e.message)
-    res.status(403).json({res: null, err: e.message})
+    res.status(500).json({res: null, err: e.message})
   }
 })
-wrap('get', '/sell/quote/', null, sellApi.getQuote)
-// TODO define a schema validator
-wrap('post', '/sell/initiate/', 'initiate-sell', sellApi.initiateSell)
 
-// wrap('get', '/sell/message/:user_id/', null, sellApi.userQueue)
-// wrap('post', '/sell/message/:user_id/:msg_id/ack', null, sellApi.messageAck)
-// wrap('post', '/sell/message/:user_id/:msg_id/response', 'message-response', sellApi.messageResponse)
+app.get('/sell/quote/', async function (req, res) {
+  try {
+    const response = await sellApi.getQuote(req)
+    console.log(response)
+    res.json({res: response, err: null})
+  } catch (e) {
+    console.log(e.message)
+    res.status(500).json({res: null, err: e.message})
+  }
+})
 
+app.use('/simplex', simplexRouter)
 app.listen(process.env.PORT)
