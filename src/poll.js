@@ -3,15 +3,9 @@ require('dotenv').config()
 const models = require('./models')
 const buy = require('./buy')(
   process.env.SIMPLEX_SANDBOX === 'true',
-  process.env.SIMPLEX_PARTNER_ID,
-  process.env.SIMPLEX_API_KEY)
+  process.env.SIMPLEX_BUY_PARTNER_ID,
+  process.env.SIMPLEX_BUY_API_KEY)
 
-const sellApi = require('./sell')(
-  process.env.SIMPLEX_SANDBOX === 'true',
-  process.env.SIMPLEX_PARTNER_ID,
-  process.env.SIMPLEX_SELL_API_KEY)
-
-/*
 buy.getEvents()
   .then(async function(data) {
     if (!data || !data.events) {
@@ -23,7 +17,7 @@ buy.getEvents()
       try {
         await models.eventCreate(events[i])
         try {
-          await buy.eventDelete(events[i].event_id)
+          await api.eventDelete(events[i].event_id)
         } catch (e) {
           console.log(`Unable to delete ${events[i].event_id}`)
         }
@@ -32,9 +26,4 @@ buy.getEvents()
       }
     }
     process.exit()
-  })
-*/
-sellApi.syncMessages()
-  .then(async function(data) {
-    console.log(JSON.stringify(data))
   })

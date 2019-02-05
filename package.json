@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "license": "MIT",
   "scripts": {
-    "migrate": "node $NODE_DEBUG_OPTION src/migrate.js",
+    "migrate": "node src/migrate.js",
     "start": "node src/index.js",
     "dev": "nodemon $NODE_DEBUG_OPTION --watch src ./src/index"
   },
@@ -19,10 +19,10 @@
     "pg-hstore": "^2.3.2",
     "request": "^2.85.0",
     "request-promise": "^4.2.2",
-    "sequelize": "^4.38.0",
-    "sequelize-cli": "^5.4.0"
+    "sequelize": "^4.38.0"
   },
   "devDependencies": {
-    "nodemon": "^1.18.9"
+    "nodemon": "^1.18.9",
+    "sequelize-cli": "^5.4.0"
   }
 }

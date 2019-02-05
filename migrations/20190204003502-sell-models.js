@@ -1,4 +1,4 @@
-'use strict';
+'use strict'
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
@@ -6,51 +6,73 @@ module.exports = {
       await queryInterface.createTable('sell_requests', {
         id: {
           primaryKey: true,
-          type: Sequelize.STRING,
+          type: Sequelize.UUID
         },
         txn_id: {
           type: Sequelize.STRING,
-          allowNull: true,
+          allowNull: false
         },
         txn_url: {
           type: Sequelize.STRING,
-          allowNull: true,
+          allowNull: false
+        },
+        crypto_amount: {
+          type: Sequelize.STRING,
+          allowNull: false
+        },
+        crypto_currency: {
+          type: Sequelize.STRING,
+          allowNull: false
+        },
+        fiat_amount: {
+          type: Sequelize.STRING,
+          allowNull: false
+        },
+        fiat_currency: {
+          type: Sequelize.STRING,
+          allowNull: false
+        },
+        status: {
+          type: Sequelize.STRING,
+          allowNull: true
         },
         quote_id: {
           type: Sequelize.STRING,
-          allowNull: false,
-        },
-        account_id: {
-          type: Sequelize.STRING,
-          allowNull: false,
-        },
-        createdAt: {
-          allowNull: false,
-          type: Sequelize.DATE
-        },
-        updatedAt: {
-          allowNull: false,
-          type: Sequelize.DATE
-        }
-      }),
-      await queryInterface.createTable('send_cryptos', {
-        id: {
-          primaryKey: true,
-          type: Sequelize.STRING,
-        },
-        reason:{
-          type: Sequelize.STRING,
-          allowNull: true,
-        },
-        txn_id: {
-          type: Sequelize.STRING,
-          allowNull: false,
+          allowNull: false
         },
         user_id: {
           type: Sequelize.STRING,
-          allowNull: false,
+          allowNull: false
+        }
+      }),
+      await queryInterface.createTable('sell_events', {
+        id: {
+          primaryKey: true,
+          type: Sequelize.UUID
         },
-        account_id: {
+        sell_id: {
+          type: Sequelize.STRING,
+          allowNull: true
+        },
+        sell_status: {
+          type: Sequelize.STRING,
+          allowNull: false
+        }
+      }),
+      await queryInterface.createTable('execution_order', {
+        id: {
+          primaryKey: true,
+          type: Sequelize.UUID
+        },
+        reason: {
+          type: Sequelize.STRING,
+          allowNull: true
+        },
+        user_id: {
+          type: Sequelize.STRING,
+          allowNull: false
+        },
+        simplex_user_id: {
           type: Sequelize.STRING,
           allowNull: true,
         },
@@ -60,23 +82,15 @@ module.exports = {
         },
         crypto_currency: {
           type: Sequelize.STRING,
-          allowNull: true,
+          allowNull: true
         },
         crypto_amount: {
           type: Sequelize.STRING,
-          allowNull: true,
+          allowNull: true
         },
         destination_crypto_address: {
           type: Sequelize.STRING,
-          allowNull: true,
-        },
-        createdAt: {
-          allowNull: false,
-          type: Sequelize.DATE
-        },
-        updatedAt: {
-          allowNull: false,
-          type: Sequelize.DATE
+          allowNull: true
         },
         crypto_amount_sent: {
           type: Sequelize.STRING,
@@ -90,28 +104,31 @@ module.exports = {
           type: Sequelize.DATE,
           allowNull: true
         },
-        canceled_at: {
+        cancelled_at: {
           type: Sequelize.DATE,
           allowNull: true
-        }
-        /*
+        },
+        failed_at: {
+          type: Sequelize.DATE,
+          allowNull: true
+        },
         sell_id: {
           references: {
             model: 'sell_request',
-            key: 'id',
+            key: 'id'
           },
-          type: Sequelize.INTEGER,
-          allowNull: true,
+          type: Sequelize.UUID,
+          allowNull: false
         }
-        */
       })
     ]
   },
 
   down: async (queryInterface, Sequelize) => {
     return [
-      await queryInterface.dropTable('send_cryptos'),
-      await queryInterface.dropTable('sell_requests')
+      await queryInterface.dropTable('execution_order'),
+      await queryInterface.dropTable('sell_requests'),
+      await queryInterface.dropTable('sell_events')
     ]
   }
-};
+}
