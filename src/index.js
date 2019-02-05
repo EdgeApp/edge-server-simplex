@@ -42,7 +42,7 @@ const authenticateSimplex = (req, res, next) => {
   if (req.query._apikey === process.env.EDGE_API_KEY) {
     next()
   } else {
-    return res.status(403).json({res: null, err: 'unauthorized'})
+    return res.status(401).json({res: null, err: 'unauthorized'})
   }
 }
 const app = express()
@@ -153,9 +153,12 @@ app.post('/send-crypto-completed', async function (req, res) {
   res.send()
 })
 
-app.get('/sendCryptoRequests/', async function (req, res) {
+app.get('/sendCryptoRequests/:sendCryptoId', async function (req, res) {
   try {
-    const response = await models.sendCryptoRequest(req.query.sendCryptoId)
+    const params = {}
+    params.id = req.params.sendCryptoId
+    params.account_id = req.query.accountId
+    const response = await models.sendCryptoRequest(params)
     res.json({res: response, err: null})
   } catch (e) {
     console.log(e.message)

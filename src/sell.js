@@ -14,7 +14,8 @@ module.exports = function (sandbox, partnerId, apiKey) {
   const API_BASE = sandbox
     // ? 'https://sell-sandbox.test-simplexcc.com/v1'
     // ? 'https://api.test-simplexcc.com/v1'
-    ? 'https://api.test-simplexcc.com/v1'
+    // ? 'https://api.sandbox.test-simplexcc.com/v1'
+    ? 'http://localhost:3333/v1'
     : 'https://api.simplexcc.com/v1';
 
   const HEADERS = {
@@ -31,12 +32,12 @@ module.exports = function (sandbox, partnerId, apiKey) {
     return data.join('&')
   }
 
-  const sendCryptoStatusEvent = (sendCryptoId, status, crytoAmountSent, txnHash) => {
+  const sendCryptoStatusEvent = (sendCryptoId, status, cryptoAmountSent, txnHash) => {
     return {
       execution_order: {
         id: sendCryptoId,
         status: status,
-        crypto_amount_sent: crytoAmountSent,
+        crypto_amount_sent: cryptoAmountSent,
         blockchain_txn_hash: txnHash
       }
     }

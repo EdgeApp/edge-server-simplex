@@ -218,9 +218,10 @@ function requestCreate (userId, payment) {
     }
   })
 }
-function sendCryptoRequest (requestId) {
+function sendCryptoRequest (params) {
   return SendCrypto.find({where: {
-    id: requestId,
+    id: params.id,
+    account_id: params.account_id,
     sent_at: null,
     canceled_at: null
   }})
