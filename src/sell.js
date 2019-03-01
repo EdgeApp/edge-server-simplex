@@ -8,7 +8,6 @@ module.exports = function (sandbox, apiKey) {
     throw new Error('Missing apiKey.')
   }
   const EDGE_SERVER_BASE_URL = sandbox
-    // ? `http://localhost:${process.env.PORT}`
     ? 'https://simplex-sandbox-api.edgesecure.co'
     : 'https://simplex-api.edgesecure.co'
 
