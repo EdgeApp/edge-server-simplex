@@ -35,7 +35,7 @@ simplexRouter.post('/send-crypto', async function (req, res) {
   } catch (e) {
     console.error('Error in notify-user', {txn_id: request.txn_id, executionOrderId: executionOrder.id})
   }
-  res.json(sellApi.executionOrderStatusEvent({id: executionOrder.id, status: 'pending'}))
+  res.json(sellApi.executionOrderStatusEvent(executionOrder))
 })
 
 simplexRouter.post('/receive-crypto', async function (req, res) {
@@ -44,9 +44,39 @@ simplexRouter.post('/receive-crypto', async function (req, res) {
     const sellRequest = await models.sellRequest({txn_id: request.txn_id})
     await models.createSellEvent(sellRequest.id, 'refunded')
     const executionOrder = await models.executionOrder({sell_id: sellRequest.id})
-    res.json(sellApi.executionOrderStatusEvent({id: executionOrder.id, status: 'pending'}))
+    res.json(sellApi.cryptoCheckStatusEvent({
+      id: executionOrder.id,
+      status: 'completed',
+      cryptoAmountReceived: executionOrder.cryptoAmountSent
+    }))
   } catch (e) {
     console.error('Error in receive-crypto', e.message)
+    res.status(500).json({res: null, err: e.message})
+  }
+})
+
+simplexRouter.get('/crypto-check-get-status', async function (req, res) {
+  const executionOrderId = req.query.crypto_check_id
+  try {
+    const executionOrder = await models.executionOrder({id: executionOrderId})
+    res.json(sellApi.cryptoCheckStatusEvent({
+      id: executionOrder.id,
+      status: 'completed',
+      cryptoAmountReceived: executionOrder.cryptoAmountSent
+    }))
+  } catch (e) {
+    console.error('crypto-check-get-status', e.message)
+    res.status(500).json({res: null, err: e.message})
+  }
+})
+
+simplexRouter.get('/execution-order-get-status', async function (req, res) {
+  const executionOrderId = req.query.execution_order_id
+  try {
+    const executionOrder = await models.executionOrder({id: executionOrderId})
+    res.json(sellApi.executionOrderStatusEvent(executionOrder))
+  } catch (e) {
+    console.error('execution-order-get-status', e.message)
     res.status(500).json({res: null, err: e.message})
   }
 })

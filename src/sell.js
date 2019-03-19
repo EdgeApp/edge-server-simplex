@@ -13,7 +13,6 @@ module.exports = function (sandbox, apiKey) {
 
   const SIMPLEX_API_BASE = sandbox
     ? 'https://api.sandbox.test-simplexcc.com/v3'
-    // ? 'http://localhost:3333/v3'
     : 'https://api.simplexcc.com/v3'
 
   const HEADERS = {
@@ -37,6 +36,16 @@ module.exports = function (sandbox, apiKey) {
         status: status,
         crypto_amount_sent: cryptoAmountSent,
         blockchain_txn_hash: txnHash
+      }
+    }
+  }
+
+  const cryptoCheckStatusEvent = ({id, status, cryptoAmountReceived}) => {
+    return {
+      crypto_check: {
+        id,
+        status,
+        crypto_amount_received: cryptoAmountReceived
       }
     }
   }
@@ -110,6 +119,7 @@ module.exports = function (sandbox, apiKey) {
     getQuote,
     initiateSell,
     notifyExecutionOrderStatus,
+    cryptoCheckStatusEvent,
     notifyUser
   }
 }

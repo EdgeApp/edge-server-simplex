@@ -12,7 +12,7 @@ required variables.
 ## Include the events API
     . ./.env
     cd docker
-    docker-compose up -d
+    docker-compose -f ./dev-docker-compose.yml up -d
     ./setup_db.sh
 
     cd ..
