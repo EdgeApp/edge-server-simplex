@@ -7,12 +7,12 @@ module.exports = function (sandbox, apiKey) {
   if (!apiKey) {
     throw new Error('Missing apiKey.')
   }
-  const EDGE_BASE_URL = sandbox ? 'http://localhost:3000/#' : 'edge://plugin/simplex/sell'
-  const EDGE_SERVER_BASE_URL = sandbox ? `http://localhost:${process.env.PORT}` : 'edge://plugin/simplex/sell'
+  const EDGE_SERVER_BASE_URL = sandbox
+    ? 'https://simplex-sandbox-api.edgesecure.co'
+    : 'https://simplex-api.edgesecure.co'
 
   const SIMPLEX_API_BASE = sandbox
     ? 'https://api.sandbox.test-simplexcc.com/v3'
-    // ? 'http://localhost:3333/v3'
     : 'https://api.simplexcc.com/v3'
 
   const HEADERS = {
@@ -36,6 +36,16 @@ module.exports = function (sandbox, apiKey) {
         status: status,
         crypto_amount_sent: cryptoAmountSent,
         blockchain_txn_hash: txnHash
+      }
+    }
+  }
+
+  const cryptoCheckStatusEvent = ({id, status, cryptoAmountReceived}) => {
+    return {
+      crypto_check: {
+        id,
+        status,
+        crypto_amount_received: cryptoAmountReceived
       }
     }
   }
@@ -84,7 +94,7 @@ module.exports = function (sandbox, apiKey) {
         txn_id: txnId,
         template_name: 'execution-order-deeplink',
         template_params: {
-          deeplink: `${EDGE_SERVER_BASE_URL}/redirect-to?to=${encodeURI(`${EDGE_BASE_URL}/sell/execution-orders/${executionOrderId}`)}`
+          deeplink: `${EDGE_SERVER_BASE_URL}/redirect?params=${encodeURI(`/sell/execution-orders/${executionOrderId}`)}`
         }
       },
       json: true
@@ -109,6 +119,7 @@ module.exports = function (sandbox, apiKey) {
     getQuote,
     initiateSell,
     notifyExecutionOrderStatus,
+    cryptoCheckStatusEvent,
     notifyUser
   }
 }

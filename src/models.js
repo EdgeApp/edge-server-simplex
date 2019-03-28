@@ -272,6 +272,8 @@ function serializeExecutionOrder (executionOrder) {
     fiat_total_amount: executionOrder.fiat_amount,
     fiat_currency: executionOrder.fiat_currency,
     requested_digital_amount: executionOrder.crypto_amount,
+    cryptoAmountSent: executionOrder.crypto_amount_sent,
+    txnHash: executionOrder.blockchain_txn_hash,
     requested_digital_currency: executionOrder.crypto_currency
   }
 }

@@ -49,10 +49,8 @@ app.use((req, res, next) => {
   next()
 })
 app.get('/redirect', function (req, res) {
-  res.redirect('edge-ret://plugins/simplex')
-})
-app.get('/redirect-to', function (req, res) {
-  res.redirect(req.query.to)
+  const params = req.query.params || ''
+  res.redirect(`edge-ret://plugins/simplex${params}`)
 })
 
 app.post('/quote', async function (req, res) {
