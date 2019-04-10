@@ -381,7 +381,7 @@ function updateSellRequest (id, params) {
 }
 
 async function createExecutionOrder (data) {
-  return ExecutionOrder.create({
+  const executionOrder = await ExecutionOrder.create({
     id: uuid(),
     sell_id: data.sell_id,
     reason: data.reason,
@@ -392,6 +392,7 @@ async function createExecutionOrder (data) {
     crypto_amount: data.crypto_amount,
     destination_crypto_address: data.destination_crypto_address
   })
+  return serializeExecutionOrder(executionOrder)
 }
 
 function createSellRequest (request) {
