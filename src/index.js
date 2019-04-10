@@ -155,8 +155,9 @@ app.post('/sell/initiate/', async function (req, res) {
     const quote = req.body.quote
     const userId = req.body.user_id
     const transaction = await sellApi.initiateSell(req.body)
-    if (transaction._error) {
-      throw new Error(transaction._error)
+    const error = transaction._error
+    if (error) {
+      throw new Error(JSON.stringify(error))
     }
     const sellRequest = await models.createSellRequest({...transaction, ...quote, userId})
     await models.createSellEvent(sellRequest.id, 'submitted')
@@ -196,6 +197,10 @@ app.get('/execution-orders/', async function (req, res) {
 app.get('/sell/quote/', async function (req, res) {
   try {
     const response = await sellApi.getQuote(req)
+    const error = response._error
+    if (error) {
+      throw new Error(JSON.stringify(error))
+    }
     console.log(response)
     res.json({res: response, err: null})
   } catch (e) {
