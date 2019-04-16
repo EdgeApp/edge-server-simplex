@@ -140,10 +140,8 @@ app.post('/execution-order-notify-status', async function (req, res) {
   const {id, sellId, status, cryptoAmountSent, txnHash} = req.body
   await models.updateExecutionOrder(id, status, cryptoAmountSent, txnHash)
   await models.createSellEvent(sellId, EXECUTION_ORDER_STATUS_MAPPING[status])
+  await sellApi.notifyExecutionOrderStatus({id, status, cryptoAmountSent, txnHash})
 
-  if (['failed', 'completed'].includes(status)) {
-    await sellApi.notifyExecutionOrderStatus({id, status, cryptoAmountSent, txnHash})
-  }
   res.send()
 })
 
