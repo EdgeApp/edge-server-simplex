@@ -17,7 +17,7 @@ buy.getEvents()
       try {
         await models.eventCreate(events[i])
         try {
-          await api.eventDelete(events[i].event_id)
+          await buy.eventDelete(events[i].event_id)
         } catch (e) {
           console.log(`Unable to delete ${events[i].event_id}`)
         }

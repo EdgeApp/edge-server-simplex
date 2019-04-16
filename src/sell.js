@@ -33,7 +33,7 @@ module.exports = function (sandbox, apiKey) {
     return {
       execution_order: {
         id,
-        status: status,
+        status: status === 'cancelled' ? 'pending' : status,
         crypto_amount_sent: cryptoAmountSent,
         blockchain_txn_hash: txnHash
       }

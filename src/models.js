@@ -479,7 +479,7 @@ async function sellEvents (userId, sellId) {
 async function eventCreate (event) {
   const request = await PaymentRequest.findById(event.payment.id)
   if (!request) {
-    requestCreate(event.payment.partner_end_user_id, {
+    await requestCreate(event.payment.partner_end_user_id, {
       payment_id: event.payment.id,
       fiat_total_amount: {
         amount: event.payment.fiat_total_amount.amount,
