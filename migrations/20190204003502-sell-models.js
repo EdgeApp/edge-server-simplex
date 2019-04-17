@@ -114,7 +114,7 @@ module.exports = {
         },
         sell_id: {
           references: {
-            model: 'sell_request',
+            model: 'sell_requests',
             key: 'id'
           },
           type: Sequelize.UUID,
