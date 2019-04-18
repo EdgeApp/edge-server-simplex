@@ -153,7 +153,7 @@ const SellEvent = sequelize.define('sell_events', {
   }
 })
 
-const ExecutionOrder = sequelize.define('execution_orders', {
+const ExecutionOrder = sequelize.define('execution_order', {
   id: {
     type: Sequelize.UUID,
     primaryKey: true,
