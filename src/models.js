@@ -154,6 +154,7 @@ const SellEvent = sequelize.define('sell_events', {
 })
 
 const ExecutionOrder = sequelize.define('execution_order', {
+  freezeTableName: true,
   id: {
     type: Sequelize.UUID,
     primaryKey: true,
@@ -210,10 +211,7 @@ const ExecutionOrder = sequelize.define('execution_order', {
   failed_at: {
     type: Sequelize.DATE,
     allowNull: true
-  },
-  freezeTableName: true,
-  tableName: 'execution_order'
-
+  }
 })
 async function migrate () {
   await PaymentRequest.sync({force: true})
