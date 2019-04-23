@@ -210,7 +210,10 @@ const ExecutionOrder = sequelize.define('execution_order', {
   failed_at: {
     type: Sequelize.DATE,
     allowNull: true
-  }
+  },
+  freezeTableName: true,
+  tableName: 'execution_order'
+
 })
 async function migrate () {
   await PaymentRequest.sync({force: true})
@@ -274,7 +277,7 @@ function serializeExecutionOrder (executionOrder) {
     requested_digital_amount: executionOrder.crypto_amount,
     cryptoAmountSent: executionOrder.crypto_amount_sent,
     txnHash: executionOrder.blockchain_txn_hash,
-    requested_digital_currency: executionOrder.crypto_currency
+    requested_digital_currency: executionOrder.crypto_currency,
   }
 }
 
