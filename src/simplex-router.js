@@ -20,12 +20,16 @@ simplexRouter.post('/send-crypto', async function (req, res) {
   let executionOrder
   try {
     const sellRequest = await models.sellRequest({txn_id: request.txn_id})
+    console.log('sellRequest', sellRequest)
     const pendingSend = await models.executionOrders({sell_id: sellRequest.id}, {onlyPending: true})
+    console.log('pendingSend', pendingSend)
     if (pendingSend.length) {
       throw new Error('already_exist')
     }
     executionOrder = await models.createExecutionOrder({...request, sell_id: sellRequest.id})
+    console.log('executionOrder', executionOrder)
     await models.createSellEvent(sellRequest.id, 'approved')
+    console.log('createSellEvent happened')
   } catch (e) {
     console.error('Error in createExecutionOrder', e.message)
     return res.status(500).json({res: null, err: e.message})
