@@ -344,6 +344,7 @@ function executionOrders (params, options = {}) {
     order: [['createdAt', 'DESC']]
   }).then(function (data) {
     return data.map(function (request) {
+      console.log('REQUEST: ', request)
       return serializeExecutionOrder(request.dataValues)
     })
   })
